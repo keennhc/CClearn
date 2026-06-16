@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    // Required: with the ES2022 default (true), unset DTO fields become own
+    // properties set to `undefined`, so `Object.assign(entity, dto)` in
+    // service update() methods overwrites untouched entity fields with
+    // `undefined`, which JSON.stringify then silently drops from responses.
+    "useDefineForClassFields": false,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noFallthroughCasesInSwitch": true,
+    "strictPropertyInitialization": false
+  }
+}
