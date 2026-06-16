@@ -9,7 +9,8 @@
     "dev": "concurrently -n backend,frontend -c blue,green \"pnpm --filter backend start:dev\" \"pnpm --filter frontend dev\"",
     "build": "pnpm -r build",
     "test": "pnpm -r --if-present test",
-    "lint": "pnpm -r --if-present lint"
+    "lint": "pnpm -r --if-present lint",
+    "db:reset": "docker compose down && docker compose up -d"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

@@ -639,6 +639,81 @@ pnpm test
 
 ---
 
+# Unit Testing
+
+## Backend
+
+Use Jest (included with NestJS).
+
+Test files live next to the source file:
+
+apps/backend/src/modules/auth/auth.service.spec.ts
+
+What to test:
+
+- Service methods (business logic)
+- Guard logic
+- DTO validation edge cases
+
+Do not test:
+
+- Controllers in isolation (test via service)
+- TypeORM internals
+- Framework behavior
+
+Mocking:
+
+- Mock repository methods using jest.fn()
+- Mock external dependencies (JwtService, bcrypt) with jest.spyOn or manual mocks
+- Do not mock the module under test
+
+Run backend tests:
+
+pnpm --filter backend test
+
+---
+
+## Frontend
+
+Use Vitest and React Testing Library.
+
+Test files live next to the component:
+
+apps/frontend/src/features/auth/LoginForm.test.tsx
+
+What to test:
+
+- User interactions (form submission, button clicks)
+- Conditional rendering (loading, error, empty states)
+- Hook behavior in isolation when logic is complex
+
+Do not test:
+
+- Material UI component internals
+- React Query internals
+- Implementation details (state variable names, internal methods)
+
+Mocking:
+
+- Mock API calls with MSW or vi.fn()
+- Mock React Router hooks (useNavigate) with vi.mock
+
+Run frontend tests:
+
+pnpm --filter frontend test
+
+---
+
+## General Testing Rules
+
+- One test file per source file
+- Test behavior, not implementation
+- Prefer descriptive test names: "returns 401 when password is wrong"
+- Keep tests simple and readable
+- No snapshot tests
+
+---
+
 # Coding Standards
 
 Backend:
@@ -678,6 +753,14 @@ General:
 - Role-based access control
 - CORS configuration
 - Environment variable validation
+
+---
+
+# API Documentation
+
+API.md is the source of truth for all endpoint contracts.
+
+When making any change to a backend endpoint — adding, removing, or modifying a route, request body, query params, response shape, or error codes — update API.md in the same task before considering the work done.
 
 ---
 

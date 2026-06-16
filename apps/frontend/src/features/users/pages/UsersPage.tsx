@@ -120,12 +120,16 @@ export function UsersPage() {
             label="Edit"
             onClick={() => handleOpenEdit(params.row)}
           />,
-          <GridActionsCellItem
-            key="toggle"
-            icon={params.row.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
-            label={params.row.isActive ? 'Deactivate' : 'Activate'}
-            onClick={() => handleToggleActive(params.row)}
-          />,
+          ...(params.row.role !== 'ADMIN'
+            ? [
+                <GridActionsCellItem
+                  key="toggle"
+                  icon={params.row.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
+                  label={params.row.isActive ? 'Deactivate' : 'Activate'}
+                  onClick={() => handleToggleActive(params.row)}
+                />,
+              ]
+            : []),
           <GridActionsCellItem
             key="delete"
             icon={<DeleteIcon />}

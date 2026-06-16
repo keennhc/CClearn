@@ -1,8 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { PaginatedResult, User as PublicUser } from '@home-owners-hub/shared-types';
+import { PaginatedResult, User as PublicUser, UserRole } from '@home-owners-hub/shared-types';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -75,6 +75,11 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto): Promise<PublicUser> {
     const user = await this.findOne(id);
+
+    const effectiveRole = dto.role ?? user.role;
+    if (effectiveRole === UserRole.ADMIN && dto.isActive === false) {
+      throw new BadRequestException('Admin users cannot be deactivated');
+    }
 
     if (dto.email && dto.email !== user.email) {
       const existing = await this.findByEmail(dto.email);

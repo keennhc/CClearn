@@ -134,7 +134,7 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
               <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
             </Select>
           </FormControl>
-          {isEdit ? (
+          {isEdit && form.role !== UserRole.ADMIN ? (
             <FormControlLabel
               control={
                 <Switch

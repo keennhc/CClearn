@@ -22,6 +22,8 @@ This starts Postgres, runs database migrations, seeds the default admin user, an
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3000
 
+Database data lives inside the container — `docker compose down` removes it. Use `docker compose stop` / `docker compose start` to pause and resume without losing data. To wipe and recreate the database run `pnpm db:reset`.
+
 ### Default admin login
 
 - Email: `admin@homeownershub.com`
@@ -59,6 +61,23 @@ pnpm --filter backend start:dev
 pnpm --filter frontend dev
 ```
 
+## Testing
+
+Run all tests across the monorepo:
+
+```
+pnpm test
+```
+
+Run tests for a single app:
+
+```
+pnpm --filter backend test
+pnpm --filter frontend test
+```
+
+Backend tests use Jest. Frontend tests use Vitest and React Testing Library. Test files live next to the source files they cover (`*.spec.ts` for backend, `*.test.ts` / `*.test.tsx` for frontend).
+
 ## Scripts
 
 | Script | Description |
@@ -67,6 +86,9 @@ pnpm --filter frontend dev
 | `pnpm build` | Build all workspace packages |
 | `pnpm test` | Run all tests |
 | `pnpm lint` | Lint all workspace packages |
+| `pnpm --filter backend test` | Backend tests only (Jest) |
+| `pnpm --filter frontend test` | Frontend tests only (Vitest) |
+| `pnpm db:reset` | Destroy and recreate the database |
 
 ## Environment Variables
 
