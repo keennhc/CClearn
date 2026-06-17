@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -15,6 +15,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     lastName: 'User',
     role: UserRole.USER,
     isActive: true,
+    profileImageUrl: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     messages: [],
@@ -144,6 +145,18 @@ describe('UsersService', () => {
         }),
       ).rejects.toThrow(ConflictException);
     });
+
+    it('throws ForbiddenException when creating with SUPER_ADMIN role', async () => {
+      await expect(
+        service.create({
+          email: 'super@example.com',
+          password: 'Password1!',
+          firstName: 'Super',
+          lastName: 'Admin',
+          role: UserRole.SUPER_ADMIN,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
   });
 
   describe('update', () => {
@@ -176,6 +189,24 @@ describe('UsersService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('throws ForbiddenException when updating a SUPER_ADMIN user', async () => {
+      const superAdmin = makeUser({ role: UserRole.SUPER_ADMIN });
+      repo.findOne.mockResolvedValue(superAdmin);
+
+      await expect(
+        service.update(superAdmin.id, { firstName: 'Changed' }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException when promoting to SUPER_ADMIN', async () => {
+      const user = makeUser({ role: UserRole.USER });
+      repo.findOne.mockResolvedValue(user);
+
+      await expect(
+        service.update(user.id, { role: UserRole.SUPER_ADMIN }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('throws ConflictException when new email belongs to another user', async () => {
       const user = makeUser({ id: 'user-1', email: 'a@example.com' });
       const other = makeUser({ id: 'user-2', email: 'b@example.com' });
@@ -204,6 +235,13 @@ describe('UsersService', () => {
       repo.findOne.mockResolvedValue(null);
 
       await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws ForbiddenException when deleting a SUPER_ADMIN user', async () => {
+      const superAdmin = makeUser({ role: UserRole.SUPER_ADMIN });
+      repo.findOne.mockResolvedValue(superAdmin);
+
+      await expect(service.remove(superAdmin.id)).rejects.toThrow(ForbiddenException);
     });
   });
 

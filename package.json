@@ -7,9 +7,16 @@
   },
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"pnpm --filter backend start:dev\" \"pnpm --filter frontend dev\"",
+    "dev:api": "pnpm --filter backend start:dev",
+    "dev:frontend": "pnpm --filter frontend dev",
     "build": "pnpm -r build",
     "test": "pnpm -r --if-present test",
     "lint": "pnpm -r --if-present lint",
+    "init:project": "cp -n apps/backend/.env.example apps/backend/.env 2>/dev/null; cp -n apps/frontend/.env.example apps/frontend/.env 2>/dev/null; pnpm install && docker compose up -d && pnpm --filter backend migration:run:dev && pnpm --filter backend seed",
+    "db:start": "docker compose up -d && pnpm --filter backend migration:run:dev",
+    "db:seed": "pnpm --filter backend seed",
+    "docker:up": "docker compose -f docker-compose.full.yml up --build",
+    "docker:down": "docker compose -f docker-compose.full.yml down",
     "db:reset": "docker compose down && docker compose up -d"
   },
   "devDependencies": {

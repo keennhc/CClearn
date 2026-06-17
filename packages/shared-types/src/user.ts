@@ -1,4 +1,5 @@
 export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   USER = 'USER',
 }
@@ -10,6 +11,7 @@ export interface User {
   lastName: string;
   role: UserRole;
   isActive: boolean;
+  profileImageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,4 +30,5 @@ export interface UpdateUserDto {
   lastName?: string;
   role?: UserRole;
   isActive?: boolean;
+  profileImageUrl?: string | null;
 }

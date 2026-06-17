@@ -7,6 +7,7 @@ import { UsersModule } from './modules/users/users.module';
 import { CommunityModule } from './modules/community/community.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     CommunityModule,
     AnnouncementsModule,
     DashboardModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

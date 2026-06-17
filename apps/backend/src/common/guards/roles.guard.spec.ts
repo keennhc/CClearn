@@ -88,6 +88,18 @@ describe('RolesGuard', () => {
     expect(guard.canActivate(context)).toBe(false);
   });
 
+  it('allows SUPER_ADMIN access to any role-protected route', () => {
+    reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+
+    const context = {
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
+      switchToHttp: () => ({ getRequest: () => ({ user: { role: UserRole.SUPER_ADMIN } }) }),
+    } as unknown as ExecutionContext;
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
+
   it('checks both ROLES_KEY values from handler and class', () => {
     reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
     const handler = jest.fn();

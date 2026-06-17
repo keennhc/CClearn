@@ -2,8 +2,18 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { CommunityMessage } from '@home-owners-hub/shared-types';
 import { getMessages } from '../api/communityApi';
+import { getSocket } from '../../../services/socket';
 
 const PAGE_SIZE = 20;
+
+function mergeMessages(existing: CommunityMessage[], incoming: CommunityMessage[]): CommunityMessage[] {
+  const ids = new Set(existing.map((m) => m.id));
+  const newItems = incoming.filter((m) => !ids.has(m.id));
+  if (newItems.length === 0) return existing;
+  return [...existing, ...newItems].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+  );
+}
 
 export function useCommunityMessages() {
   const [page, setPage] = useState<number | null>(null);
@@ -15,12 +25,12 @@ export function useCommunityMessages() {
   });
 
   useEffect(() => {
-    if (metaQuery.data && page === null) {
-      const lastPage = Math.max(1, Math.ceil(metaQuery.data.total / PAGE_SIZE));
-      setPage(lastPage);
-      if (lastPage === 1) {
-        setMessages(metaQuery.data.items);
-      }
+    if (!metaQuery.data || page !== null) return;
+
+    const lastPage = Math.max(1, Math.ceil(metaQuery.data.total / PAGE_SIZE));
+    setPage(lastPage);
+    if (lastPage === 1) {
+      setMessages(metaQuery.data.items);
     }
   }, [metaQuery.data, page]);
 
@@ -32,24 +42,32 @@ export function useCommunityMessages() {
 
   useEffect(() => {
     if (pageQuery.data) {
-      setMessages((prev) => {
-        const existingIds = new Set(prev.map((m) => m.id));
-        const incoming = pageQuery.data.items.filter((m) => !existingIds.has(m.id));
-        return [...incoming, ...prev];
-      });
+      setMessages((prev) => mergeMessages(prev, pageQuery.data.items));
     }
   }, [pageQuery.data]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    socket.connect();
+
+    const handler = (message: CommunityMessage) => {
+      setMessages((prev) => mergeMessages(prev, [message]));
+    };
+
+    socket.on('new-message', handler);
+
+    return () => {
+      socket.off('new-message', handler);
+      socket.disconnect();
+    };
+  }, []);
 
   const loadOlder = () => {
     setPage((current) => (current && current > 1 ? current - 1 : current));
   };
 
-  const addMessage = (message: CommunityMessage) => {
-    setMessages((prev) => [...prev, message]);
-  };
-
   const hasMore = (page ?? 1) > 1;
   const isLoading = metaQuery.isLoading || pageQuery.isLoading;
 
-  return { messages, isLoading, hasMore, loadOlder, addMessage };
+  return { messages, isLoading, hasMore, loadOlder };
 }

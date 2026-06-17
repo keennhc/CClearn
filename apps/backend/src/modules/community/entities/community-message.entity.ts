@@ -13,8 +13,17 @@ export class CommunityMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('text')
-  message: string;
+  @Column('text', { nullable: true })
+  message: string | null;
+
+  @Column('varchar', { nullable: true })
+  attachmentUrl: string | null;
+
+  @Column('varchar', { nullable: true })
+  attachmentType: string | null;
+
+  @Column('varchar', { nullable: true })
+  attachmentName: string | null;
 
   @Column()
   userId: string;

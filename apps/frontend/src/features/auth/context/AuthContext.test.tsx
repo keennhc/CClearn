@@ -55,6 +55,16 @@ describe('AuthContext', () => {
     expect(result.current.isAdmin).toBe(true);
   });
 
+  it('sets isAdmin when user role is SUPER_ADMIN', () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    act(() => {
+      result.current.login(makeToken(UserRole.SUPER_ADMIN));
+    });
+
+    expect(result.current.isAdmin).toBe(true);
+  });
+
   it('does not set isAdmin when user role is USER', () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 

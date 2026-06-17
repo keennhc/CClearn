@@ -54,9 +54,55 @@ Public. Returns a JWT access token.
 
 ---
 
+## Upload
+
+### POST /upload
+
+Requires authentication. Uploads a file to S3.
+
+**Request**
+
+`multipart/form-data` with fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| file | file | Yes | The file to upload |
+| folder | string | Yes | One of: `profile-images`, `chat-media` |
+
+Constraints:
+- `profile-images`: 5MB max, image/* only
+- `chat-media`: 25MB max, any supported type
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "string",
+    "key": "string",
+    "type": "IMAGE | VIDEO | GIF | FILE",
+    "name": "string"
+  }
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 400 | File is required |
+| 400 | Invalid folder |
+| 400 | Profile image must be under 5MB |
+| 400 | Only image files are allowed for profile images |
+
+---
+
 ## Users
 
-All `/users` endpoints require `ADMIN` role.
+All `/users` endpoints require `ADMIN` or `SUPER_ADMIN` role.
+
+`SUPER_ADMIN` users cannot be created, modified, or deleted via the API.
 
 ### GET /users
 
@@ -79,8 +125,9 @@ List all users. Supports optional search by name or email.
       "email": "string",
       "firstName": "string",
       "lastName": "string",
-      "role": "ADMIN | USER",
+      "role": "SUPER_ADMIN | ADMIN | USER",
       "isActive": true,
+      "profileImageUrl": "string | null",
       "createdAt": "ISO8601",
       "updatedAt": "ISO8601"
     }
@@ -110,7 +157,7 @@ Get a single user by ID.
     "email": "string",
     "firstName": "string",
     "lastName": "string",
-    "role": "ADMIN | USER",
+    "role": "SUPER_ADMIN | ADMIN | USER",
     "isActive": true,
     "createdAt": "ISO8601",
     "updatedAt": "ISO8601"
@@ -138,7 +185,7 @@ Create a new user.
   "password": "string",
   "firstName": "string",
   "lastName": "string",
-  "role": "ADMIN | USER"
+  "role": "SUPER_ADMIN | ADMIN | USER"
 }
 ```
 
@@ -152,7 +199,7 @@ Create a new user.
     "email": "string",
     "firstName": "string",
     "lastName": "string",
-    "role": "ADMIN | USER",
+    "role": "SUPER_ADMIN | ADMIN | USER",
     "isActive": true,
     "createdAt": "ISO8601",
     "updatedAt": "ISO8601"
@@ -164,6 +211,7 @@ Create a new user.
 
 | Status | Message |
 |--------|---------|
+| 403 | Cannot assign SUPER_ADMIN role |
 | 409 | Email already in use |
 
 ---
@@ -186,7 +234,7 @@ Update a user. All fields are optional.
   "password": "string",
   "firstName": "string",
   "lastName": "string",
-  "role": "ADMIN | USER",
+  "role": "SUPER_ADMIN | ADMIN | USER",
   "isActive": true
 }
 ```
@@ -201,7 +249,7 @@ Update a user. All fields are optional.
     "email": "string",
     "firstName": "string",
     "lastName": "string",
-    "role": "ADMIN | USER",
+    "role": "SUPER_ADMIN | ADMIN | USER",
     "isActive": true,
     "createdAt": "ISO8601",
     "updatedAt": "ISO8601"
@@ -213,6 +261,8 @@ Update a user. All fields are optional.
 
 | Status | Message |
 |--------|---------|
+| 403 | Super admin users cannot be modified |
+| 403 | Cannot assign SUPER_ADMIN role |
 | 404 | User not found |
 | 409 | Email already in use |
 
@@ -241,6 +291,7 @@ Delete a user permanently.
 
 | Status | Message |
 |--------|---------|
+| 403 | Super admin users cannot be deleted |
 | 404 | User not found |
 
 ---
@@ -269,13 +320,13 @@ Get all community chat messages, ordered oldest to newest. Supports pagination.
     "messages": [
       {
         "id": "uuid",
-        "message": "string",
-        "createdAt": "ISO8601",
-        "user": {
-          "id": "uuid",
-          "firstName": "string",
-          "lastName": "string"
-        }
+        "message": "string | null",
+        "userId": "uuid",
+        "userName": "string",
+        "attachmentUrl": "string | null",
+        "attachmentType": "IMAGE | VIDEO | GIF | FILE | null",
+        "attachmentName": "string | null",
+        "createdAt": "ISO8601"
       }
     ],
     "total": 0,
@@ -289,13 +340,16 @@ Get all community chat messages, ordered oldest to newest. Supports pagination.
 
 ### POST /community/messages
 
-Post a new message to the community chat.
+Post a new message to the community chat. At least one of `message` or `attachmentUrl` is required.
 
 **Request body**
 
 ```json
 {
-  "message": "string"
+  "message": "string (optional if attachment present)",
+  "attachmentUrl": "string (optional)",
+  "attachmentType": "IMAGE | VIDEO | GIF | FILE (optional)",
+  "attachmentName": "string (optional)"
 }
 ```
 
@@ -306,13 +360,13 @@ Post a new message to the community chat.
   "success": true,
   "data": {
     "id": "uuid",
-    "message": "string",
-    "createdAt": "ISO8601",
-    "user": {
-      "id": "uuid",
-      "firstName": "string",
-      "lastName": "string"
-    }
+    "message": "string | null",
+    "userId": "uuid",
+    "userName": "string",
+    "attachmentUrl": "string | null",
+    "attachmentType": "IMAGE | VIDEO | GIF | FILE | null",
+    "attachmentName": "string | null",
+    "createdAt": "ISO8601"
   }
 }
 ```
@@ -363,7 +417,7 @@ Public to authenticated users. Returns all announcements ordered newest first.
 
 ### POST /announcements
 
-Requires `ADMIN` role. Create a new announcement.
+Requires `ADMIN` or `SUPER_ADMIN` role. Create a new announcement.
 
 **Request body**
 
@@ -398,7 +452,7 @@ Requires `ADMIN` role. Create a new announcement.
 
 ### PATCH /announcements/:id
 
-Requires `ADMIN` role. Update an existing announcement.
+Requires `ADMIN` or `SUPER_ADMIN` role. Update an existing announcement.
 
 **Path params**
 
@@ -445,7 +499,7 @@ Requires `ADMIN` role. Update an existing announcement.
 
 ### DELETE /announcements/:id
 
-Requires `ADMIN` role. Delete an announcement.
+Requires `ADMIN` or `SUPER_ADMIN` role. Delete an announcement.
 
 **Path params**
 

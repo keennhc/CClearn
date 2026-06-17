@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -55,6 +55,10 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto): Promise<PublicUser> {
+    if (dto.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Cannot assign SUPER_ADMIN role');
+    }
+
     const existing = await this.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException('Email already in use');
@@ -76,6 +80,14 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto): Promise<PublicUser> {
     const user = await this.findOne(id);
 
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin users cannot be modified');
+    }
+
+    if (dto.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Cannot assign SUPER_ADMIN role');
+    }
+
     const effectiveRole = dto.role ?? user.role;
     if (effectiveRole === UserRole.ADMIN && dto.isActive === false) {
       throw new BadRequestException('Admin users cannot be deactivated');
@@ -95,6 +107,9 @@ export class UsersService {
 
   async remove(id: string): Promise<void> {
     const user = await this.findOne(id);
+    if (user.role === UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Super admin users cannot be deleted');
+    }
     await this.usersRepository.remove(user);
   }
 
@@ -110,6 +125,7 @@ export class UsersService {
       lastName: user.lastName,
       role: user.role,
       isActive: user.isActive,
+      profileImageUrl: user.profileImageUrl ?? null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

@@ -2,6 +2,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import { UserRole } from '@home-owners-hub/shared-types';
 import { decodeToken, isTokenExpired } from '../../../utils/jwt';
 import { clearToken, getToken, setToken } from '../../../utils/storage';
+import { queryClient } from '../../../services/queryClient';
 
 interface AuthUser {
   id: string;
@@ -43,13 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     clearToken();
     setUser(null);
+    queryClient.clear();
   };
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: user !== null,
-      isAdmin: user?.role === UserRole.ADMIN,
+      isAdmin: user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN,
       login,
       logout,
     }),

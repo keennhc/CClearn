@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
+import { Avatar, Box, Button, Chip, Stack, TextField, Typography } from '@mui/material';
 import { DataGrid, GridActionsCellItem, type GridColDef } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -74,21 +74,30 @@ export function UsersPage() {
         field: 'name',
         headerName: 'Name',
         flex: 1,
-        minWidth: 160,
+        minWidth: 200,
         valueGetter: (_value, row) => `${row.firstName} ${row.lastName}`,
+        renderCell: (params) => (
+          <Stack direction="row" alignItems="center" spacing={1} height="100%">
+            <Avatar
+              src={params.row.profileImageUrl ?? undefined}
+              sx={{ width: 32, height: 32, fontSize: 14 }}
+            >
+              {params.row.firstName[0]}
+            </Avatar>
+            <span>{params.value}</span>
+          </Stack>
+        ),
       },
       { field: 'email', headerName: 'Email', flex: 1.5, minWidth: 200 },
       {
         field: 'role',
         headerName: 'Role',
-        width: 120,
-        renderCell: (params) => (
-          <Chip
-            label={params.value}
-            size="small"
-            color={params.value === 'ADMIN' ? 'primary' : 'default'}
-          />
-        ),
+        width: 150,
+        renderCell: (params) => {
+          const label = params.value === 'SUPER_ADMIN' ? 'Super Admin' : params.value === 'ADMIN' ? 'Admin' : 'User';
+          const color = params.value === 'SUPER_ADMIN' ? 'secondary' : params.value === 'ADMIN' ? 'primary' : 'default';
+          return <Chip label={label} size="small" color={color} />;
+        },
       },
       {
         field: 'isActive',
@@ -113,30 +122,35 @@ export function UsersPage() {
         type: 'actions',
         headerName: 'Actions',
         width: 140,
-        getActions: (params) => [
-          <GridActionsCellItem
-            key="edit"
-            icon={<EditIcon />}
-            label="Edit"
-            onClick={() => handleOpenEdit(params.row)}
-          />,
-          ...(params.row.role !== 'ADMIN'
-            ? [
-                <GridActionsCellItem
-                  key="toggle"
-                  icon={params.row.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
-                  label={params.row.isActive ? 'Deactivate' : 'Activate'}
-                  onClick={() => handleToggleActive(params.row)}
-                />,
-              ]
-            : []),
-          <GridActionsCellItem
-            key="delete"
-            icon={<DeleteIcon />}
-            label="Delete"
-            onClick={() => setDeletingUser(params.row)}
-          />,
-        ],
+        getActions: (params) => {
+          if (params.row.role === 'SUPER_ADMIN') {
+            return [];
+          }
+          return [
+            <GridActionsCellItem
+              key="edit"
+              icon={<EditIcon />}
+              label="Edit"
+              onClick={() => handleOpenEdit(params.row)}
+            />,
+            ...(params.row.role !== 'ADMIN'
+              ? [
+                  <GridActionsCellItem
+                    key="toggle"
+                    icon={params.row.isActive ? <ToggleOnIcon /> : <ToggleOffIcon />}
+                    label={params.row.isActive ? 'Deactivate' : 'Activate'}
+                    onClick={() => handleToggleActive(params.row)}
+                  />,
+                ]
+              : []),
+            <GridActionsCellItem
+              key="delete"
+              icon={<DeleteIcon />}
+              label="Delete"
+              onClick={() => setDeletingUser(params.row)}
+            />,
+          ];
+        },
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

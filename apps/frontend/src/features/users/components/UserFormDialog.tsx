@@ -1,6 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import {
   Alert,
+  Avatar,
+  Badge,
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -8,6 +11,7 @@ import {
   DialogTitle,
   FormControl,
   FormControlLabel,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -15,8 +19,10 @@ import {
   Switch,
   TextField,
 } from '@mui/material';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import type { CreateUserDto, UpdateUserDto, User } from '@home-owners-hub/shared-types';
 import { UserRole } from '@home-owners-hub/shared-types';
+import { uploadFile } from '../../../services/uploadApi';
 
 interface UserFormDialogProps {
   open: boolean;
@@ -34,14 +40,21 @@ const emptyForm = {
   lastName: '',
   role: UserRole.USER,
   isActive: true,
+  profileImageUrl: null as string | null,
 };
+
+const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }: UserFormDialogProps) {
   const [form, setForm] = useState(emptyForm);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = user !== null;
 
   useEffect(() => {
     if (open) {
+      setUploadError(null);
       setForm(
         user
           ? {
@@ -51,11 +64,34 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
               lastName: user.lastName,
               role: user.role,
               isActive: user.isActive,
+              profileImageUrl: user.profileImageUrl,
             }
           : emptyForm,
       );
     }
   }, [open, user]);
+
+  const handleImageSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+      setUploadError('Image must be under 5MB');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const result = await uploadFile(file, 'profile-images');
+      setForm((f) => ({ ...f, profileImageUrl: result.url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,6 +103,7 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
         lastName: form.lastName,
         role: form.role,
         isActive: form.isActive,
+        profileImageUrl: form.profileImageUrl,
       };
       onSubmit(dto);
     } else {
@@ -86,7 +123,42 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
       <DialogTitle>{isEdit ? 'Edit User' : 'New User'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} component="form" onSubmit={handleSubmit} id="user-form" pt={1}>
-          {error ? <Alert severity="error">{error}</Alert> : null}
+          {error || uploadError ? (
+            <Alert severity="error">{error || uploadError}</Alert>
+          ) : null}
+
+          {isEdit ? (
+            <Box display="flex" justifyContent="center" mb={1}>
+              <Badge
+                overlap="circular"
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                badgeContent={
+                  <IconButton
+                    size="small"
+                    sx={{ bgcolor: 'primary.main', color: 'white', '&:hover': { bgcolor: 'primary.dark' }, width: 32, height: 32 }}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    <PhotoCameraIcon fontSize="small" />
+                  </IconButton>
+                }
+              >
+                <Avatar
+                  src={form.profileImageUrl ?? undefined}
+                  sx={{ width: 80, height: 80, fontSize: 32 }}
+                >
+                  {form.firstName?.[0] ?? ''}
+                </Avatar>
+              </Badge>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleImageSelect}
+              />
+            </Box>
+          ) : null}
 
           <TextField
             label="Email"
@@ -134,7 +206,7 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
               <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
             </Select>
           </FormControl>
-          {isEdit && form.role !== UserRole.ADMIN ? (
+          {isEdit && form.role !== UserRole.ADMIN && form.role !== UserRole.SUPER_ADMIN ? (
             <FormControlLabel
               control={
                 <Switch
@@ -148,10 +220,10 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
+        <Button onClick={onClose} disabled={loading || uploading}>
           Cancel
         </Button>
-        <Button type="submit" form="user-form" variant="contained" disabled={loading}>
+        <Button type="submit" form="user-form" variant="contained" disabled={loading || uploading}>
           {isEdit ? 'Save' : 'Create'}
         </Button>
       </DialogActions>

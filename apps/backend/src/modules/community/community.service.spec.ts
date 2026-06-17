@@ -4,6 +4,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { UserRole } from '@home-owners-hub/shared-types';
 import { CommunityMessage } from './entities/community-message.entity';
 import { CommunityService } from './community.service';
+import { CommunityGateway } from './community.gateway';
 import { User } from '../users/entities/user.entity';
 
 function makeUser(): User {
@@ -15,6 +16,7 @@ function makeUser(): User {
     lastName: 'User',
     role: UserRole.USER,
     isActive: true,
+    profileImageUrl: null,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     messages: [],
@@ -27,6 +29,9 @@ function makeMessage(overrides: Partial<CommunityMessage> = {}): CommunityMessag
     id: 'msg-1',
     message: 'Hello world',
     userId: 'user-1',
+    attachmentUrl: null,
+    attachmentType: null,
+    attachmentName: null,
     createdAt: new Date('2024-01-01'),
     user: makeUser(),
     ...overrides,
@@ -35,6 +40,7 @@ function makeMessage(overrides: Partial<CommunityMessage> = {}): CommunityMessag
 
 describe('CommunityService', () => {
   let service: CommunityService;
+  let gateway: { broadcastMessage: jest.Mock };
   let repo: {
     findAndCount: jest.Mock;
     findOne: jest.Mock;
@@ -52,10 +58,13 @@ describe('CommunityService', () => {
       count: jest.fn(),
     };
 
+    gateway = { broadcastMessage: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityService,
         { provide: getRepositoryToken(CommunityMessage), useValue: repo },
+        { provide: CommunityGateway, useValue: gateway },
       ],
     }).compile();
 
@@ -95,6 +104,28 @@ describe('CommunityService', () => {
 
       expect(result.message).toBe('Hello world');
       expect(result.userName).toBe('Test User');
+    });
+
+    it('creates a message with an attachment', async () => {
+      const msg = makeMessage({
+        message: null,
+        attachmentUrl: 'https://bucket.s3.us-east-1.amazonaws.com/chat-media/test.png',
+        attachmentType: 'IMAGE',
+        attachmentName: 'test.png',
+      });
+      repo.create.mockReturnValue(msg);
+      repo.save.mockResolvedValue(msg);
+      repo.findOne.mockResolvedValue(msg);
+
+      const result = await service.create('user-1', {
+        attachmentUrl: 'https://bucket.s3.us-east-1.amazonaws.com/chat-media/test.png',
+        attachmentType: 'IMAGE' as never,
+        attachmentName: 'test.png',
+      });
+
+      expect(result.attachmentUrl).toBe('https://bucket.s3.us-east-1.amazonaws.com/chat-media/test.png');
+      expect(result.attachmentType).toBe('IMAGE');
+      expect(result.message).toBeNull();
     });
 
     it('throws NotFoundException when saved message cannot be re-fetched', async () => {

@@ -118,7 +118,8 @@ apps/backend/src
 │ ├── auth/
 │ ├── users/
 │ ├── community/
-│ └── announcements/
+│ ├── announcements/
+│ └── upload/
 │
 ├── database/
 │
@@ -187,7 +188,8 @@ packages/shared-types/src
 ├── auth.ts
 ├── user.ts
 ├── announcement.ts
-└── community.ts
+├── community.ts
+└── upload.ts
 
 ---
 
@@ -216,11 +218,13 @@ Fields:
 - lastName
 - role
 - isActive
+- profileImageUrl (nullable)
 - createdAt
 - updatedAt
 
 Role Values:
 
+- SUPER_ADMIN
 - ADMIN
 - USER
 
@@ -235,8 +239,11 @@ Indexes:
 Fields:
 
 - id (uuid)
-- message
+- message (nullable)
 - userId
+- attachmentUrl (nullable)
+- attachmentType (nullable, values: IMAGE, VIDEO, GIF, FILE)
+- attachmentName (nullable)
 - createdAt
 
 Relations:
@@ -280,9 +287,13 @@ Admin routes must require ADMIN role.
 
 # Seed Data
 
-On application startup:
+Seeding is a manual step, not automatic on startup.
 
-Create a default admin user if one does not exist.
+Run the seed command to create the default admin user:
+
+pnpm db:seed
+
+This is idempotent — it skips if the admin already exists.
 
 Email:
 
@@ -294,7 +305,7 @@ Admin123!
 
 Role:
 
-ADMIN
+SUPER_ADMIN
 
 ---
 
@@ -369,12 +380,30 @@ POST /community/messages
 Features:
 
 - View community chat history
-- Post messages
+- Post messages with optional file attachments (images, videos, GIFs, files)
 - Store all messages in PostgreSQL
+- Attachments stored in S3
 
 Future:
 
 - WebSockets for realtime chat
+
+---
+
+## Upload Module
+
+Authenticated Users
+
+Endpoints:
+
+POST /upload
+
+Features:
+
+- Upload files to S3
+- Supports profile images (5MB max, images only)
+- Supports chat media (25MB max, any type)
+- Returns URL, key, type, and filename
 
 ---
 
@@ -551,9 +580,11 @@ Rich text editor is optional.
 
 # Docker
 
-Application must run using:
+There are two Docker Compose files:
 
-docker compose up
+docker-compose.yml — DB only (used for local development)
+
+docker-compose.full.yml — All services: postgres, backend, frontend (used for full Docker deployment)
 
 ---
 
@@ -567,6 +598,8 @@ Port:
 
 Persistent volume required.
 
+Both compose files include this service.
+
 ---
 
 ## backend
@@ -579,6 +612,8 @@ Depends on postgres.
 
 Must automatically run migrations.
 
+Only in docker-compose.full.yml.
+
 ---
 
 ## frontend
@@ -588,6 +623,8 @@ Port:
 5173
 
 Depends on backend.
+
+Only in docker-compose.full.yml.
 
 ---
 
@@ -605,6 +642,12 @@ JWT_SECRET
 
 PORT
 
+AWS_S3_BUCKET
+AWS_S3_REGION
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_S3_ENDPOINT
+
 Frontend:
 
 VITE_API_URL
@@ -617,17 +660,33 @@ Install:
 
 pnpm install
 
-Run Backend:
+Start DB and run migrations (local dev):
 
-pnpm --filter backend start:dev
+pnpm db:start
 
-Run Frontend:
+Seed default admin user:
 
-pnpm --filter frontend dev
+pnpm db:seed
 
-Run All:
+Run Backend only:
+
+pnpm dev:api
+
+Run Frontend only:
+
+pnpm dev:frontend
+
+Run Backend and Frontend together:
 
 pnpm dev
+
+Run all services in Docker:
+
+pnpm docker:up
+
+Stop full Docker stack:
+
+pnpm docker:down
 
 Build All:
 
@@ -785,7 +844,7 @@ When generating code:
 - Do not add unnecessary abstractions.
 - Do not introduce microservices.
 - Keep the architecture simple and maintainable.
-- Ensure the entire application can be started using a single docker compose up command.
+- For full Docker deployment use docker-compose.full.yml (pnpm docker:up). For local dev, docker compose up starts DB only and apps run in terminals.
 - Use latest version to libraries
 - Keep it simple do not over engineer. always simplify, no unnecessary defensive programming. no extra features focus on simplicity.
 - Be Consise. Keep README minimal. IMPORTANT: no emojis in code or readme ever.
