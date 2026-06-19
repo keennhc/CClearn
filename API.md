@@ -54,6 +54,99 @@ Public. Returns a JWT access token.
 
 ---
 
+### POST /auth/register
+
+Public. Creates a new user account. Optionally joins or creates a community.
+
+`communityCode` and `createCommunity` are mutually exclusive.
+
+**Request body**
+
+```json
+{
+  "email": "string",
+  "password": "string (min 8 characters)",
+  "firstName": "string",
+  "lastName": "string",
+  "communityCode": "string (optional, join existing community as COMMUNITY_MEMBER)",
+  "createCommunity": {
+    "name": "string",
+    "description": "string (optional)"
+  }
+}
+```
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "string"
+  }
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 400 | Cannot both join and create a community during registration |
+| 404 | Community not found (invalid code) |
+| 409 | Email already in use |
+
+---
+
+### GET /auth/me
+
+Requires authentication. Returns current user profile with community memberships.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "role": "SUPER_ADMIN | USER",
+    "profileImageUrl": "string | null",
+    "communities": [
+      {
+        "id": "uuid",
+        "name": "string",
+        "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Dashboard
+
+### GET /dashboard/stats
+
+Requires `SUPER_ADMIN` role. Returns global aggregate counts.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "totalUsers": 0,
+    "totalMessages": 0,
+    "totalAnnouncements": 0
+  }
+}
+```
+
+---
+
 ## Upload
 
 ### POST /upload
@@ -100,38 +193,45 @@ Constraints:
 
 ## Users
 
-All `/users` endpoints require `ADMIN` or `SUPER_ADMIN` role.
+All `/users` endpoints require `SUPER_ADMIN` role.
 
 `SUPER_ADMIN` users cannot be created, modified, or deleted via the API.
 
 ### GET /users
 
-List all users. Supports optional search by name or email.
+List all users. Supports optional search by name or email, with pagination.
 
 **Query params**
 
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| search | string | No | Filter by name or email |
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| search | string | No | | Filter by name or email |
+| page | number | No | 1 | Page number |
+| limit | number | No | 20 | Items per page |
 
 **Response**
 
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "uuid",
-      "email": "string",
-      "firstName": "string",
-      "lastName": "string",
-      "role": "SUPER_ADMIN | ADMIN | USER",
-      "isActive": true,
-      "profileImageUrl": "string | null",
-      "createdAt": "ISO8601",
-      "updatedAt": "ISO8601"
-    }
-  ]
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "email": "string",
+        "firstName": "string",
+        "lastName": "string",
+        "role": "SUPER_ADMIN | USER",
+        "isActive": true,
+        "profileImageUrl": "string | null",
+        "createdAt": "ISO8601",
+        "updatedAt": "ISO8601"
+      }
+    ],
+    "total": 0,
+    "page": 1,
+    "limit": 20
+  }
 }
 ```
 
@@ -140,12 +240,6 @@ List all users. Supports optional search by name or email.
 ### GET /users/:id
 
 Get a single user by ID.
-
-**Path params**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| id | uuid | User ID |
 
 **Response**
 
@@ -157,8 +251,9 @@ Get a single user by ID.
     "email": "string",
     "firstName": "string",
     "lastName": "string",
-    "role": "SUPER_ADMIN | ADMIN | USER",
+    "role": "SUPER_ADMIN | USER",
     "isActive": true,
+    "profileImageUrl": "string | null",
     "createdAt": "ISO8601",
     "updatedAt": "ISO8601"
   }
@@ -175,17 +270,17 @@ Get a single user by ID.
 
 ### POST /users
 
-Create a new user.
+Create a new user. Users are always created with `USER` role. Community roles are managed via community membership.
 
 **Request body**
 
 ```json
 {
   "email": "string",
-  "password": "string",
+  "password": "string (min 8 characters)",
   "firstName": "string",
   "lastName": "string",
-  "role": "SUPER_ADMIN | ADMIN | USER"
+  "role": "USER (optional, defaults to USER)"
 }
 ```
 
@@ -199,8 +294,9 @@ Create a new user.
     "email": "string",
     "firstName": "string",
     "lastName": "string",
-    "role": "SUPER_ADMIN | ADMIN | USER",
+    "role": "SUPER_ADMIN | USER",
     "isActive": true,
+    "profileImageUrl": "string | null",
     "createdAt": "ISO8601",
     "updatedAt": "ISO8601"
   }
@@ -220,42 +316,22 @@ Create a new user.
 
 Update a user. All fields are optional.
 
-**Path params**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| id | uuid | User ID |
-
 **Request body**
 
 ```json
 {
   "email": "string",
-  "password": "string",
   "firstName": "string",
   "lastName": "string",
-  "role": "SUPER_ADMIN | ADMIN | USER",
-  "isActive": true
+  "role": "SUPER_ADMIN | USER",
+  "isActive": true,
+  "profileImageUrl": "string | null"
 }
 ```
 
 **Response**
 
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "email": "string",
-    "firstName": "string",
-    "lastName": "string",
-    "role": "SUPER_ADMIN | ADMIN | USER",
-    "isActive": true,
-    "createdAt": "ISO8601",
-    "updatedAt": "ISO8601"
-  }
-}
-```
+Same as GET /users/:id.
 
 **Errors**
 
@@ -271,12 +347,6 @@ Update a user. All fields are optional.
 ### DELETE /users/:id
 
 Delete a user permanently.
-
-**Path params**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| id | uuid | User ID |
 
 **Response**
 
@@ -296,20 +366,19 @@ Delete a user permanently.
 
 ---
 
-## Community
+## Communities
 
-All `/community` endpoints require authentication.
+### GET /communities
 
-### GET /community/messages
-
-Get all community chat messages, ordered oldest to newest. Supports pagination.
+Requires `SUPER_ADMIN` role. List all active communities with inline stats.
 
 **Query params**
 
 | Param | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
+| search | string | No | | Filter by name |
 | page | number | No | 1 | Page number |
-| limit | number | No | 50 | Items per page |
+| limit | number | No | 20 | Items per page |
 
 **Response**
 
@@ -317,39 +386,60 @@ Get all community chat messages, ordered oldest to newest. Supports pagination.
 {
   "success": true,
   "data": {
-    "messages": [
+    "items": [
       {
         "id": "uuid",
-        "message": "string | null",
-        "userId": "uuid",
-        "userName": "string",
-        "attachmentUrl": "string | null",
-        "attachmentType": "IMAGE | VIDEO | GIF | FILE | null",
-        "attachmentName": "string | null",
-        "createdAt": "ISO8601"
+        "name": "string",
+        "code": "string",
+        "description": "string | null",
+        "isActive": true,
+        "memberCount": 0,
+        "messageCount": 0,
+        "announcementCount": 0,
+        "createdBy": "uuid",
+        "createdAt": "ISO8601",
+        "updatedAt": "ISO8601"
       }
     ],
     "total": 0,
     "page": 1,
-    "limit": 50
+    "limit": 20
   }
 }
 ```
 
 ---
 
-### POST /community/messages
+### GET /communities/mine
 
-Post a new message to the community chat. At least one of `message` or `attachmentUrl` is required.
+Requires authentication. Returns communities the current user belongs to.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
+    }
+  ]
+}
+```
+
+---
+
+### POST /communities/join
+
+Requires authentication. Join a community by code as `COMMUNITY_MEMBER`.
 
 **Request body**
 
 ```json
 {
-  "message": "string (optional if attachment present)",
-  "attachmentUrl": "string (optional)",
-  "attachmentType": "IMAGE | VIDEO | GIF | FILE (optional)",
-  "attachmentName": "string (optional)"
+  "code": "string"
 }
 ```
 
@@ -360,24 +450,259 @@ Post a new message to the community chat. At least one of `message` or `attachme
   "success": true,
   "data": {
     "id": "uuid",
-    "message": "string | null",
     "userId": "uuid",
+    "communityId": "uuid",
+    "role": "COMMUNITY_MEMBER",
     "userName": "string",
-    "attachmentUrl": "string | null",
-    "attachmentType": "IMAGE | VIDEO | GIF | FILE | null",
-    "attachmentName": "string | null",
-    "createdAt": "ISO8601"
+    "userEmail": "string",
+    "joinedAt": "ISO8601"
+  }
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 404 | Community not found |
+| 409 | Already a member of this community |
+
+---
+
+### GET /communities/:id
+
+Requires `SUPER_ADMIN` or community membership. Get community details.
+
+**Response**
+
+Same shape as a single item in GET /communities response.
+
+---
+
+### POST /communities
+
+Requires authentication. Create a community. Creator becomes `COMMUNITY_ADMIN`.
+
+**Request body**
+
+```json
+{
+  "name": "string",
+  "description": "string (optional)"
+}
+```
+
+**Response**
+
+Same shape as GET /communities/:id.
+
+---
+
+### PATCH /communities/:id
+
+Requires `SUPER_ADMIN` or `COMMUNITY_ADMIN` of the community.
+
+**Request body**
+
+```json
+{
+  "name": "string (optional)",
+  "description": "string (optional)",
+  "isActive": "boolean (optional, SUPER_ADMIN only for reactivation)"
+}
+```
+
+**Response**
+
+Same shape as GET /communities/:id.
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 404 | Community not found |
+
+---
+
+### DELETE /communities/:id
+
+Requires `SUPER_ADMIN`. Soft-deletes the community (sets `isActive = false`).
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 404 | Community not found |
+
+---
+
+### POST /communities/:id/regenerate-code
+
+Requires `SUPER_ADMIN` or `COMMUNITY_ADMIN`. Generates a new join code; old code stops working.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "code": "string"
   }
 }
 ```
 
 ---
 
-## Announcements
+### GET /communities/:id/stats
 
-### GET /announcements
+Requires `SUPER_ADMIN` or community membership. Returns community-scoped stats.
 
-Public to authenticated users. Returns all announcements ordered newest first.
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "totalMembers": 0,
+    "totalMessages": 0,
+    "totalAnnouncements": 0
+  }
+}
+```
+
+---
+
+## Community Members
+
+All member endpoints require `SUPER_ADMIN` or `COMMUNITY_ADMIN` of the community.
+
+### GET /communities/:id/members
+
+List community members. Supports search by name or email, with pagination.
+
+**Query params**
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| search | string | No | | Filter by name or email |
+| page | number | No | 1 | Page number |
+| limit | number | No | 20 | Items per page |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": "uuid",
+        "userId": "uuid",
+        "communityId": "uuid",
+        "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER",
+        "userName": "string",
+        "userEmail": "string",
+        "joinedAt": "ISO8601"
+      }
+    ],
+    "total": 0,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+### POST /communities/:id/members
+
+Add a member by email. The user must already have an account.
+
+**Request body**
+
+```json
+{
+  "email": "string",
+  "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
+}
+```
+
+**Response**
+
+Single member object (same shape as items in GET response).
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 404 | User not found -- they must register first |
+| 409 | User is already a member of this community |
+
+---
+
+### PATCH /communities/:id/members/:memberId
+
+Update a member's role.
+
+**Request body**
+
+```json
+{
+  "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
+}
+```
+
+**Response**
+
+Single member object.
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 400 | Cannot remove the last admin of a community |
+| 404 | Member not found |
+
+---
+
+### DELETE /communities/:id/members/:memberId
+
+Remove a member from the community.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 400 | Cannot remove the last admin of a community |
+| 404 | Member not found |
+
+---
+
+## Community Messages
+
+All message endpoints require authentication and community membership (or `SUPER_ADMIN`).
+
+### GET /communities/:communityId/messages
+
+Get community chat messages, ordered oldest to newest. Supports pagination.
 
 **Query params**
 
@@ -392,18 +717,18 @@ Public to authenticated users. Returns all announcements ordered newest first.
 {
   "success": true,
   "data": {
-    "announcements": [
+    "items": [
       {
         "id": "uuid",
-        "title": "string",
-        "content": "string",
-        "createdAt": "ISO8601",
-        "updatedAt": "ISO8601",
-        "createdBy": {
-          "id": "uuid",
-          "firstName": "string",
-          "lastName": "string"
-        }
+        "message": "string | null",
+        "communityId": "uuid",
+        "userId": "uuid",
+        "userName": "string",
+        "userRole": "SUPER_ADMIN | USER",
+        "attachmentUrl": "string | null",
+        "attachmentType": "IMAGE | VIDEO | GIF | FILE | null",
+        "attachmentName": "string | null",
+        "createdAt": "ISO8601"
       }
     ],
     "total": 0,
@@ -415,50 +740,75 @@ Public to authenticated users. Returns all announcements ordered newest first.
 
 ---
 
-### POST /announcements
+### POST /communities/:communityId/messages
 
-Requires `ADMIN` or `SUPER_ADMIN` role. Create a new announcement.
+Post a new message. At least one of `message` or `attachmentUrl` is required.
 
 **Request body**
 
 ```json
 {
-  "title": "string",
-  "content": "string"
+  "message": "string (optional if attachment present)",
+  "attachmentUrl": "string (optional)",
+  "attachmentType": "IMAGE | VIDEO | GIF | FILE (optional)",
+  "attachmentName": "string (optional)"
 }
 ```
+
+**Response**
+
+Single message object (same shape as items in GET response).
+
+---
+
+### WebSocket: new-message
+
+Real-time updates via Socket.IO. Messages are broadcast to the community room `community:<communityId>`.
+
+Clients must join the room to receive events.
+
+**Event name:** `new-message`
+
+**Payload:** Same shape as the message object in POST response.
+
+---
+
+## Announcements
+
+All announcement endpoints are scoped to a community.
+
+Read access: any community member or `SUPER_ADMIN`.
+
+Write access: `COMMUNITY_ADMIN` of that community or `SUPER_ADMIN`.
+
+### GET /communities/:communityId/announcements
+
+Returns all announcements for the community, ordered newest first.
 
 **Response**
 
 ```json
 {
   "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "string",
-    "content": "string",
-    "createdAt": "ISO8601",
-    "updatedAt": "ISO8601",
-    "createdBy": {
+  "data": [
+    {
       "id": "uuid",
-      "firstName": "string",
-      "lastName": "string"
+      "title": "string",
+      "content": "string",
+      "communityId": "uuid",
+      "createdBy": "uuid",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
     }
-  }
+  ]
 }
 ```
 
 ---
 
-### PATCH /announcements/:id
+### POST /communities/:communityId/announcements
 
-Requires `ADMIN` or `SUPER_ADMIN` role. Update an existing announcement.
-
-**Path params**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| id | uuid | Announcement ID |
+Create a new announcement.
 
 **Request body**
 
@@ -471,23 +821,26 @@ Requires `ADMIN` or `SUPER_ADMIN` role. Update an existing announcement.
 
 **Response**
 
+Single announcement object.
+
+---
+
+### PATCH /communities/:communityId/announcements/:id
+
+Update an existing announcement.
+
+**Request body**
+
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "string",
-    "content": "string",
-    "createdAt": "ISO8601",
-    "updatedAt": "ISO8601",
-    "createdBy": {
-      "id": "uuid",
-      "firstName": "string",
-      "lastName": "string"
-    }
-  }
+  "title": "string (optional)",
+  "content": "string (optional)"
 }
 ```
+
+**Response**
+
+Single announcement object.
 
 **Errors**
 
@@ -497,15 +850,9 @@ Requires `ADMIN` or `SUPER_ADMIN` role. Update an existing announcement.
 
 ---
 
-### DELETE /announcements/:id
+### DELETE /communities/:communityId/announcements/:id
 
-Requires `ADMIN` or `SUPER_ADMIN` role. Delete an announcement.
-
-**Path params**
-
-| Param | Type | Description |
-|-------|------|-------------|
-| id | uuid | Announcement ID |
+Delete an announcement.
 
 **Response**
 
@@ -528,9 +875,9 @@ Requires `ADMIN` or `SUPER_ADMIN` role. Delete an announcement.
 
 | Status | Meaning |
 |--------|---------|
-| 400 | Validation error — check request body |
+| 400 | Validation error -- check request body |
 | 401 | Missing or invalid token |
-| 403 | Insufficient role |
+| 403 | Insufficient role or not a community member |
 | 404 | Resource not found |
-| 409 | Conflict — duplicate resource |
+| 409 | Conflict -- duplicate resource |
 | 500 | Internal server error |

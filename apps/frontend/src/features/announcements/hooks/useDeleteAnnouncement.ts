@@ -1,14 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteAnnouncement } from '../api/announcementsApi';
 
-export function useDeleteAnnouncement() {
+export function useDeleteAnnouncement(communityId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => deleteAnnouncement(id),
+    mutationFn: (id: string) => deleteAnnouncement(communityId, id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

@@ -2,14 +2,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateAnnouncementDto } from '@home-owners-hub/shared-types';
 import { createAnnouncement } from '../api/announcementsApi';
 
-export function useCreateAnnouncement() {
+export function useCreateAnnouncement(communityId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (dto: CreateAnnouncementDto) => createAnnouncement(dto),
+    mutationFn: (dto: CreateAnnouncementDto) => createAnnouncement(communityId, dto),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: ['announcements', communityId] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

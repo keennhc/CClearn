@@ -1,15 +1,14 @@
 ## Project Overview
 
-Home Owners Hub is a community platform for homeowners.
-
-The initial MVP is intentionally small and focused.
+Home Owners Hub is a multi-community platform for homeowners.
 
 Primary features:
 
-1. Authentication
-2. Community Chat
-3. Announcements Feed
-4. Admin Portal
+1. Authentication (login, registration)
+2. Multi-community management
+3. Community-scoped chat
+4. Community-scoped announcements
+5. Role-based admin portal (SUPER_ADMIN global view, COMMUNITY_ADMIN scoped view)
 
 Do not implement additional homeowner management features unless explicitly requested.
 
@@ -25,6 +24,22 @@ Out of Scope:
 - Service provider marketplace
 - Home analytics
 - AI recommendations
+
+---
+
+# Role Model
+
+Two-tier role system:
+
+**Global (user.role):** `SUPER_ADMIN`, `USER`
+- `SUPER_ADMIN` -- platform-wide admin, sees all communities, global user management
+- `USER` -- regular user, belongs to communities via membership
+
+**Per-community (community_member.role):** `COMMUNITY_ADMIN`, `COMMUNITY_MEMBER`
+- `COMMUNITY_ADMIN` -- manages their community (members, chat, announcements); can log into admin portal
+- `COMMUNITY_MEMBER` -- participates in their community; cannot access admin portal
+
+SUPER_ADMIN bypasses all community-level permission checks.
 
 ---
 
@@ -104,12 +119,6 @@ Location:
 
 apps/backend
 
-Stack:
-
-- NestJS
-- PostgreSQL
-- TypeORM
-
 Folder Structure:
 
 apps/backend/src
@@ -117,8 +126,10 @@ apps/backend/src
 ├── modules/
 │ ├── auth/
 │ ├── users/
+│ ├── communities/
 │ ├── community/
 │ ├── announcements/
+│ ├── dashboard/
 │ └── upload/
 │
 ├── database/
@@ -142,12 +153,6 @@ Location:
 
 apps/frontend
 
-Stack:
-
-- React
-- Material UI
-- React Query
-
 Folder Structure:
 
 apps/frontend/src
@@ -155,8 +160,10 @@ apps/frontend/src
 ├── features/
 │ ├── auth/
 │ ├── users/
+│ ├── communities/
 │ ├── community/
-│ └── announcements/
+│ ├── announcements/
+│ └── dashboard/
 │
 ├── components/
 ├── layouts/
@@ -181,14 +188,16 @@ Purpose:
 - Shared interfaces
 - API response types
 
-Example Structure:
+Structure:
 
 packages/shared-types/src
 
+├── api-response.ts
 ├── auth.ts
 ├── user.ts
 ├── announcement.ts
 ├── community.ts
+├── dashboard.ts
 └── upload.ts
 
 ---
@@ -216,21 +225,46 @@ Fields:
 - passwordHash
 - firstName
 - lastName
-- role
+- role (SUPER_ADMIN, USER)
 - isActive
 - profileImageUrl (nullable)
 - createdAt
 - updatedAt
 
-Role Values:
-
-- SUPER_ADMIN
-- ADMIN
-- USER
-
 Indexes:
 
 - email unique
+
+---
+
+## Community
+
+Fields:
+
+- id (uuid)
+- name
+- code (unique, 8 alphanumeric chars)
+- description (nullable)
+- isActive (default true)
+- createdBy (FK to users)
+- createdAt
+- updatedAt
+
+---
+
+## CommunityMember
+
+Fields:
+
+- id (uuid)
+- userId (FK to users)
+- communityId (FK to communities)
+- role (COMMUNITY_ADMIN, COMMUNITY_MEMBER)
+- joinedAt
+
+Constraints:
+
+- Unique on (userId, communityId)
 
 ---
 
@@ -240,15 +274,12 @@ Fields:
 
 - id (uuid)
 - message (nullable)
-- userId
+- communityId (FK to communities)
+- userId (FK to users)
 - attachmentUrl (nullable)
 - attachmentType (nullable, values: IMAGE, VIDEO, GIF, FILE)
 - attachmentName (nullable)
 - createdAt
-
-Relations:
-
-- Many messages belong to one user
 
 ---
 
@@ -259,29 +290,26 @@ Fields:
 - id (uuid)
 - title
 - content
-- createdBy
+- communityId (FK to communities)
+- createdBy (FK to users)
 - createdAt
 - updatedAt
-
-Relations:
-
-- Many announcements belong to one user
 
 ---
 
 # Authentication
 
-Authentication is required.
+Use JWT access tokens. JWT payload: `{ sub, email, role }`.
 
-Use JWT access tokens.
+After login, the frontend calls `GET /auth/me` to fetch the full profile with community memberships. Community data is NOT stored in the JWT.
 
-Store passwords using bcrypt.
+Store passwords using bcrypt. Never store plaintext passwords.
 
-Never store plaintext passwords.
-
-Protected routes must use guards.
-
-Admin routes must require ADMIN role.
+Protected routes use guards:
+- `JwtAuthGuard` -- validates JWT token
+- `RolesGuard` -- checks global user role (SUPER_ADMIN bypasses all)
+- `CommunityMemberGuard` -- checks community membership
+- `CommunityAdminGuard` -- checks COMMUNITY_ADMIN role in a community
 
 ---
 
@@ -289,23 +317,15 @@ Admin routes must require ADMIN role.
 
 Seeding is a manual step, not automatic on startup.
 
-Run the seed command to create the default admin user:
+Run the seed command:
 
 pnpm db:seed
 
-This is idempotent — it skips if the admin already exists.
+This is idempotent. It creates:
 
-Email:
-
-admin@homeownershub.com
-
-Password:
-
-Admin123!
-
-Role:
-
-SUPER_ADMIN
+1. Default admin user (admin@homeownershub.com / Admin123! / SUPER_ADMIN)
+2. Default community (code: DEFAULT1)
+3. Admin membership in the default community as COMMUNITY_ADMIN
 
 ---
 
@@ -313,90 +333,93 @@ SUPER_ADMIN
 
 ## Auth Module
 
-Responsibilities:
-
-- Login
-- JWT generation
-- Password validation
-
 Endpoints:
 
-POST /auth/login
-
-Request:
-
-{
-"email": "admin@homeownershub.com",
-"password": "Admin123!"
-}
-
-Response:
-
-{
-"success": true,
-"data": {
-"accessToken": "..."
-}
-}
+- POST /auth/login -- login, returns access token
+- POST /auth/register -- register new user, optionally join/create community
+- GET /auth/me -- returns current user profile with community memberships
 
 ---
 
 ## Users Module
 
-Admin Only
+SUPER_ADMIN only.
 
 Endpoints:
 
-GET /users
-
-GET /users/:id
-
-POST /users
-
-PATCH /users/:id
-
-DELETE /users/:id
-
-Features:
-
-- Create users
-- Edit users
-- Delete users
-- Disable users
-- Search users
+- GET /users -- list users (paginated, searchable)
+- GET /users/:id -- get user
+- POST /users -- create user (always USER role; community roles via membership)
+- PATCH /users/:id -- update user
+- DELETE /users/:id -- delete user
 
 ---
 
-## Community Module
-
-Authenticated Users
+## Communities Module
 
 Endpoints:
 
-GET /community/messages
+- GET /communities -- list all communities (SUPER_ADMIN only, with inline stats)
+- GET /communities/:id -- get community details
+- POST /communities -- create community (any authenticated user; creator becomes COMMUNITY_ADMIN)
+- PATCH /communities/:id -- update community (SUPER_ADMIN or COMMUNITY_ADMIN)
+- DELETE /communities/:id -- soft-delete, sets isActive=false (SUPER_ADMIN only)
+- POST /communities/:id/regenerate-code -- regenerate join code
+- GET /communities/:id/stats -- community-scoped stats
+- GET /communities/:id/members -- list members (paginated, searchable)
+- POST /communities/:id/members -- add member by email
+- PATCH /communities/:id/members/:memberId -- update member role
+- DELETE /communities/:id/members/:memberId -- remove member
+- GET /communities/mine -- list current user's communities
+- POST /communities/join -- join community by code
 
-POST /community/messages
+---
 
-Features:
+## Community (Chat) Module
 
-- View community chat history
-- Post messages with optional file attachments (images, videos, GIFs, files)
-- Store all messages in PostgreSQL
-- Attachments stored in S3
+All endpoints scoped to a community.
 
-Future:
+Endpoints:
 
-- WebSockets for realtime chat
+- GET /communities/:communityId/messages -- get messages (paginated, oldest first)
+- POST /communities/:communityId/messages -- post message
+
+WebSocket: room-based broadcasting per community. Event: `new-message`.
+
+---
+
+## Announcements Module
+
+All endpoints scoped to a community.
+
+Endpoints:
+
+- GET /communities/:communityId/announcements -- list announcements (newest first)
+- POST /communities/:communityId/announcements -- create (COMMUNITY_ADMIN or SUPER_ADMIN)
+- PATCH /communities/:communityId/announcements/:id -- update (COMMUNITY_ADMIN or SUPER_ADMIN)
+- DELETE /communities/:communityId/announcements/:id -- delete (COMMUNITY_ADMIN or SUPER_ADMIN)
+
+---
+
+## Dashboard Module
+
+SUPER_ADMIN only.
+
+Endpoints:
+
+- GET /dashboard/stats -- global stats (total users, messages, announcements)
+
+Community-scoped stats are at GET /communities/:id/stats.
 
 ---
 
 ## Upload Module
 
-Authenticated Users
+Authenticated Users.
 
 Endpoints:
 
-POST /upload
+- POST /upload
 
 Features:
 
@@ -407,184 +430,56 @@ Features:
 
 ---
 
-## Announcements Module
-
-Endpoints:
-
-GET /announcements
-
-POST /announcements
-
-PATCH /announcements/:id
-
-DELETE /announcements/:id
-
-Permissions:
-
-Admins can create, edit, and delete.
-
-Users can view.
-
----
-
 # API Standards
 
-Use DTO validation.
-
-Use class-validator.
+Use DTO validation with class-validator.
 
 Enable global validation pipe.
 
 Return consistent responses.
 
-Success:
+Success: `{ "success": true, "data": {} }`
 
-{
-"success": true,
-"data": {}
-}
-
-Error:
-
-{
-"success": false,
-"message": "Error message"
-}
+Error: `{ "success": false, "message": "Error message" }`
 
 ---
 
 # Admin Portal
 
-The frontend is an Admin Portal.
+The frontend is an Admin Portal with two views:
 
-Only authenticated admins can access it.
+**SUPER_ADMIN view:**
+- Sidebar: Dashboard, Users, Communities
+- Dashboard shows global stats
+- Communities page lists all communities; click into detail view with tabs (Members, Chat, Announcements)
+
+**COMMUNITY_ADMIN view:**
+- Sidebar: Dashboard, Members, Chat, Announcements (scoped to their community)
+- Dashboard shows community-scoped stats
+- Community switcher in header for multi-community admins
+- No access to global Users page or Communities list
+
+COMMUNITY_MEMBER cannot access the admin portal.
 
 ---
 
 # Admin Login Screen
 
-Fields:
+Fields: Email, Password
 
-- Email
-- Password
+Features: Login, Logout, Protected routes
 
-Features:
-
-- Login
-- Logout
-- Protected routes
-
-Use Material UI.
-
-Design should be clean and modern.
-
----
-
-# Admin Layout
-
-Use a responsive layout.
-
-Desktop:
-
-- Sidebar
-- Top header
-
-Mobile:
-
-- Drawer navigation
-
-Sidebar Menu:
-
-- Dashboard
-- Users
-- Community Chat
-- Announcements
-
----
-
-# Dashboard Page
-
-Display:
-
-- Total Users
-- Total Messages
-- Total Announcements
-
-Use simple statistic cards.
-
----
-
-# Users Page
-
-Features:
-
-- View users
-- Search users
-- Create users
-- Edit users
-- Delete users
-- Activate/deactivate users
-
-Columns:
-
-- Name
-- Email
-- Role
-- Status
-- Created Date
-
-Use Material UI Data Grid.
-
----
-
-# Community Chat Page
-
-Features:
-
-- View all chat messages
-- Post messages as admin
-- Pagination
-
-Display:
-
-- User Name
-- Message
-- Timestamp
-
-Newest messages should appear last.
-
-Chat should feel similar to a messaging app.
-
----
-
-# Announcements Page
-
-Features:
-
-- Create announcement
-- Edit announcement
-- Delete announcement
-- View announcements
-
-Fields:
-
-Title
-
-Content
-
-Use a multiline text editor.
-
-Rich text editor is optional.
+After login, `GET /auth/me` determines portal view based on role and community memberships.
 
 ---
 
 # Docker
 
-There are two Docker Compose files:
+Two Docker Compose files:
 
-docker-compose.yml — DB only (used for local development)
+docker-compose.yml -- DB only (local development)
 
-docker-compose.full.yml — All services: postgres, backend, frontend (used for full Docker deployment)
+docker-compose.full.yml -- All services: postgres, backend, frontend (full Docker deployment)
 
 ---
 
@@ -592,39 +487,15 @@ docker-compose.full.yml — All services: postgres, backend, frontend (used for 
 
 ## postgres
 
-Port:
-
-5432
-
-Persistent volume required.
-
-Both compose files include this service.
-
----
+Port: 5432. Persistent volume required. Both compose files.
 
 ## backend
 
-Port:
-
-3000
-
-Depends on postgres.
-
-Must automatically run migrations.
-
-Only in docker-compose.full.yml.
-
----
+Port: 3000. Depends on postgres. Must auto-run migrations. Only in docker-compose.full.yml.
 
 ## frontend
 
-Port:
-
-5173
-
-Depends on backend.
-
-Only in docker-compose.full.yml.
+Port: 5173. Depends on backend. Only in docker-compose.full.yml.
 
 ---
 
@@ -664,7 +535,7 @@ Start DB and run migrations (local dev):
 
 pnpm db:start
 
-Seed default admin user:
+Seed default admin user and community:
 
 pnpm db:seed
 
@@ -809,7 +680,8 @@ General:
 - Server-side authorization checks
 - DTO validation
 - Input sanitization
-- Role-based access control
+- Role-based access control (global + per-community)
+- Community isolation (members can only access their own community)
 - CORS configuration
 - Environment variable validation
 
@@ -819,7 +691,7 @@ General:
 
 API.md is the source of truth for all endpoint contracts.
 
-When making any change to a backend endpoint — adding, removing, or modifying a route, request body, query params, response shape, or error codes — update API.md in the same task before considering the work done.
+When making any change to a backend endpoint -- adding, removing, or modifying a route, request body, query params, response shape, or error codes -- update API.md in the same task before considering the work done.
 
 ---
 

@@ -7,7 +7,7 @@ function makePayload(overrides: Partial<JwtPayload> = {}): JwtPayload {
   return {
     sub: 'user-1',
     email: 'test@example.com',
-    role: UserRole.ADMIN,
+    role: UserRole.USER,
     iat: now - 60,
     exp: now + 3600,
     ...overrides,

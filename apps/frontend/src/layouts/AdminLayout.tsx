@@ -5,12 +5,15 @@ import {
   Box,
   Divider,
   Drawer,
+  FormControl,
   IconButton,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  MenuItem,
+  Select,
   Toolbar,
   Typography,
   useMediaQuery,
@@ -19,6 +22,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
+import GroupsIcon from '@mui/icons-material/Groups';
 import ForumIcon from '@mui/icons-material/Forum';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -30,13 +34,18 @@ interface NavItem {
   label: string;
   path: string;
   icon: JSX.Element;
-  adminOnly?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon />, adminOnly: true },
-  { label: 'Users', path: '/users', icon: <PeopleIcon />, adminOnly: true },
-  { label: 'Community Chat', path: '/community', icon: <ForumIcon /> },
+const SUPER_ADMIN_ITEMS: NavItem[] = [
+  { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+  { label: 'Users', path: '/users', icon: <PeopleIcon /> },
+  { label: 'Communities', path: '/communities', icon: <GroupsIcon /> },
+];
+
+const COMMUNITY_ADMIN_ITEMS: NavItem[] = [
+  { label: 'Dashboard', path: '/dashboard', icon: <DashboardIcon /> },
+  { label: 'Members', path: '/members', icon: <PeopleIcon /> },
+  { label: 'Chat', path: '/chat', icon: <ForumIcon /> },
   { label: 'Announcements', path: '/announcements', icon: <CampaignIcon /> },
 ];
 
@@ -44,17 +53,24 @@ export function AdminLayout() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('sm'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isSuperAdmin, isCommunityAdmin, activeCommunityId, setActiveCommunity, logout } = useAuth();
   const location = useLocation();
 
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
+  const items = isSuperAdmin ? SUPER_ADMIN_ITEMS : COMMUNITY_ADMIN_ITEMS;
+  const adminCommunities = user?.communities.filter((c) => c.role === 'COMMUNITY_ADMIN') ?? [];
+  const activeCommunityName = adminCommunities.find((c) => c.id === activeCommunityId)?.name;
 
   const drawerContent = (
     <div>
-      <Toolbar>
+      <Toolbar sx={{ flexDirection: 'column', alignItems: 'flex-start', py: 1 }}>
         <Typography variant="h6" noWrap fontWeight={600}>
           Home Owners Hub
         </Typography>
+        {!isSuperAdmin && activeCommunityName ? (
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {activeCommunityName}
+          </Typography>
+        ) : null}
       </Toolbar>
       <Divider />
       <List>
@@ -96,6 +112,19 @@ export function AdminLayout() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {items.find((item) => location.pathname.startsWith(item.path))?.label ?? ''}
           </Typography>
+          {!isSuperAdmin && adminCommunities.length > 1 ? (
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <Select
+                value={activeCommunityId ?? ''}
+                onChange={(e) => setActiveCommunity(e.target.value)}
+                sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' } }}
+              >
+                {adminCommunities.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : null}
           <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
             {user?.email}
           </Typography>
@@ -124,12 +153,17 @@ export function AdminLayout() {
         sx={{
           flexGrow: 1,
           width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
-          minHeight: '100vh',
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
           bgcolor: 'background.default',
+          overflow: 'hidden',
         }}
       >
         <Toolbar />
-        <Outlet />
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

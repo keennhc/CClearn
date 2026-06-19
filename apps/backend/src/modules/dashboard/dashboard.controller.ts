@@ -9,7 +9,7 @@ import { AnnouncementsService } from '../announcements/announcements.service';
 
 @Controller('dashboard')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles(UserRole.SUPER_ADMIN)
 export class DashboardController {
   constructor(
     private readonly usersService: UsersService,

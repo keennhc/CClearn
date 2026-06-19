@@ -15,18 +15,18 @@ import { AttachmentType } from '@home-owners-hub/shared-types';
 function getRoleBgColor(role: string, isOwn: boolean): string {
   if (isOwn) return 'primary.main';
   if (role === 'SUPER_ADMIN') return '#7b1fa2';
-  if (role === 'ADMIN') return '#1565c0';
+  if (role === 'COMMUNITY_ADMIN') return '#1565c0';
   return 'grey.100';
 }
 
 function getRoleTextColor(role: string, isOwn: boolean): string {
-  if (isOwn || role === 'SUPER_ADMIN' || role === 'ADMIN') return '#fff';
+  if (isOwn || role === 'SUPER_ADMIN' || role === 'COMMUNITY_ADMIN') return '#fff';
   return 'text.primary';
 }
 
 function getRoleLabel(role: string): string | null {
   if (role === 'SUPER_ADMIN') return 'Super Admin';
-  if (role === 'ADMIN') return 'Admin';
+  if (role === 'COMMUNITY_ADMIN') return 'Admin';
   return null;
 }
 
@@ -78,14 +78,14 @@ function MessageAttachment({ message }: { message: CommunityMessage }) {
   );
 }
 
-export function CommunityChatPage() {
-  const { messages, isLoading, hasMore, loadOlder } = useCommunityMessages();
-  const postMutation = usePostMessage();
+export function CommunityChatPage({ communityId }: { communityId: string }) {
+  const { messages, isLoading, hasMore, loadOlder } = useCommunityMessages(communityId);
+  const postMutation = usePostMessage(communityId);
   const [text, setText] = useState('');
   const [attachment, setAttachment] = useState<UploadResult | null>(null);
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
   const hasScrolledInitially = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevMessageCount = useRef(0);
@@ -97,7 +97,6 @@ export function CommunityChatPage() {
     prevMessageCount.current = messages.length;
   }, [messages.length]);
 
-  // Scroll to bottom on first load using a callback ref pattern
   const bottomCallbackRef = (node: HTMLDivElement | null) => {
     bottomRef.current = node;
     if (node && !isLoading && !hasScrolledInitially.current) {
@@ -152,11 +151,7 @@ export function CommunityChatPage() {
   const canSend = !postMutation.isPending && !uploading && (text.trim().length > 0 || attachment !== null);
 
   return (
-    <Box p={3} display="flex" flexDirection="column" height="calc(100vh - 64px)">
-      <Typography variant="h4" fontWeight={600} mb={2}>
-        Community Chat
-      </Typography>
-
+    <Box display="flex" flexDirection="column" sx={{ flex: 1, minHeight: 0, height: '100%' }}>
       <Paper
         variant="outlined"
         sx={{ flexGrow: 1, overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column' }}
@@ -213,7 +208,7 @@ export function CommunityChatPage() {
         <div ref={bottomCallbackRef} />
       </Paper>
 
-      <Box mt={2}>
+      <Box mt={2} pb={2}>
         {attachment ? (
           <Chip
             label={attachment.name}

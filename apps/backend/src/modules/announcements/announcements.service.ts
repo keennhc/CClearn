@@ -13,32 +13,34 @@ export class AnnouncementsService {
     private readonly announcementsRepository: Repository<Announcement>,
   ) {}
 
-  async findAll(): Promise<AnnouncementDto[]> {
+  async findAll(communityId: string): Promise<AnnouncementDto[]> {
     const announcements = await this.announcementsRepository.find({
+      where: { communityId },
       order: { createdAt: 'DESC' },
     });
     return announcements.map((announcement) => this.toDto(announcement));
   }
 
-  async create(userId: string, dto: CreateAnnouncementDto): Promise<AnnouncementDto> {
+  async create(communityId: string, userId: string, dto: CreateAnnouncementDto): Promise<AnnouncementDto> {
     const announcement = this.announcementsRepository.create({
       title: dto.title,
       content: dto.content,
+      communityId,
       createdBy: userId,
     });
     const saved = await this.announcementsRepository.save(announcement);
     return this.toDto(saved);
   }
 
-  async update(id: string, dto: UpdateAnnouncementDto): Promise<AnnouncementDto> {
-    const announcement = await this.findOneEntity(id);
+  async update(communityId: string, id: string, dto: UpdateAnnouncementDto): Promise<AnnouncementDto> {
+    const announcement = await this.findOneEntity(communityId, id);
     Object.assign(announcement, dto);
     const saved = await this.announcementsRepository.save(announcement);
     return this.toDto(saved);
   }
 
-  async remove(id: string): Promise<void> {
-    const announcement = await this.findOneEntity(id);
+  async remove(communityId: string, id: string): Promise<void> {
+    const announcement = await this.findOneEntity(communityId, id);
     await this.announcementsRepository.remove(announcement);
   }
 
@@ -46,8 +48,10 @@ export class AnnouncementsService {
     return this.announcementsRepository.count();
   }
 
-  private async findOneEntity(id: string): Promise<Announcement> {
-    const announcement = await this.announcementsRepository.findOne({ where: { id } });
+  private async findOneEntity(communityId: string, id: string): Promise<Announcement> {
+    const announcement = await this.announcementsRepository.findOne({
+      where: { id, communityId },
+    });
     if (!announcement) {
       throw new NotFoundException('Announcement not found');
     }
@@ -59,6 +63,7 @@ export class AnnouncementsService {
       id: announcement.id,
       title: announcement.title,
       content: announcement.content,
+      communityId: announcement.communityId,
       createdBy: announcement.createdBy,
       createdAt: announcement.createdAt.toISOString(),
       updatedAt: announcement.updatedAt.toISOString(),

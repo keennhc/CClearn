@@ -15,13 +15,19 @@ function mergeMessages(existing: CommunityMessage[], incoming: CommunityMessage[
   );
 }
 
-export function useCommunityMessages() {
+export function useCommunityMessages(communityId: string) {
   const [page, setPage] = useState<number | null>(null);
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
 
+  useEffect(() => {
+    setPage(null);
+    setMessages([]);
+  }, [communityId]);
+
   const metaQuery = useQuery({
-    queryKey: ['community-messages', 'meta'],
-    queryFn: () => getMessages(1, PAGE_SIZE),
+    queryKey: ['community-messages', communityId, 'meta'],
+    queryFn: () => getMessages(communityId, 1, PAGE_SIZE),
+    enabled: !!communityId,
   });
 
   useEffect(() => {
@@ -35,9 +41,9 @@ export function useCommunityMessages() {
   }, [metaQuery.data, page]);
 
   const pageQuery = useQuery({
-    queryKey: ['community-messages', page],
-    queryFn: () => getMessages(page as number, PAGE_SIZE),
-    enabled: page !== null && page > 1,
+    queryKey: ['community-messages', communityId, page],
+    queryFn: () => getMessages(communityId, page as number, PAGE_SIZE),
+    enabled: page !== null && page > 1 && !!communityId,
   });
 
   useEffect(() => {
@@ -47,20 +53,25 @@ export function useCommunityMessages() {
   }, [pageQuery.data]);
 
   useEffect(() => {
+    if (!communityId) return;
     const socket = getSocket();
     socket.connect();
+    socket.emit('join', `community:${communityId}`);
 
     const handler = (message: CommunityMessage) => {
-      setMessages((prev) => mergeMessages(prev, [message]));
+      if (message.communityId === communityId) {
+        setMessages((prev) => mergeMessages(prev, [message]));
+      }
     };
 
     socket.on('new-message', handler);
 
     return () => {
       socket.off('new-message', handler);
+      socket.emit('leave', `community:${communityId}`);
       socket.disconnect();
     };
-  }, []);
+  }, [communityId]);
 
   const loadOlder = () => {
     setPage((current) => (current && current > 1 ? current - 1 : current));

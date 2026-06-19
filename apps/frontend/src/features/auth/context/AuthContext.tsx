@@ -1,61 +1,119 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { UserRole } from '@home-owners-hub/shared-types';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AuthProfile, CommunityMemberRole, UserRole } from '@home-owners-hub/shared-types';
 import { decodeToken, isTokenExpired } from '../../../utils/jwt';
 import { clearToken, getToken, setToken } from '../../../utils/storage';
 import { queryClient } from '../../../services/queryClient';
-
-interface AuthUser {
-  id: string;
-  email: string;
-  role: UserRole;
-}
+import { api } from '../../../services/api';
+import { unwrap } from '../../../services/unwrap';
 
 interface AuthContextValue {
-  user: AuthUser | null;
+  user: AuthProfile | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
-  login: (token: string) => void;
+  isSuperAdmin: boolean;
+  isCommunityAdmin: boolean;
+  activeCommunityId: string | null;
+  setActiveCommunity: (id: string) => void;
+  loading: boolean;
+  login: (token: string) => Promise<void>;
   logout: () => void;
 }
 
+const ACTIVE_COMMUNITY_KEY = 'activeCommunityId';
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function userFromToken(token: string | null): AuthUser | null {
-  if (!token) {
-    return null;
-  }
-
+function hasValidToken(): boolean {
+  const token = getToken();
+  if (!token) return false;
   const payload = decodeToken(token);
-  if (!payload || isTokenExpired(payload)) {
-    return null;
-  }
+  return payload !== null && !isTokenExpired(payload);
+}
 
-  return { id: payload.sub, email: payload.email, role: payload.role };
+async function fetchProfile(): Promise<AuthProfile> {
+  const res = await api.get('/auth/me');
+  return unwrap(res);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => userFromToken(getToken()));
+  const [user, setUser] = useState<AuthProfile | null>(null);
+  const [loading, setLoading] = useState(() => hasValidToken());
 
-  const login = (token: string) => {
+  useEffect(() => {
+    if (!hasValidToken()) return;
+    fetchProfile()
+      .then(setUser)
+      .catch(() => {
+        clearToken();
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const [activeCommunityId, setActiveCommunityIdState] = useState<string | null>(
+    () => localStorage.getItem(ACTIVE_COMMUNITY_KEY),
+  );
+
+  const adminCommunities = useMemo(
+    () => user?.communities.filter((c) => c.role === CommunityMemberRole.COMMUNITY_ADMIN) ?? [],
+    [user],
+  );
+
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN;
+  const isCommunityAdmin = adminCommunities.length > 0;
+
+  useEffect(() => {
+    if (!user || isSuperAdmin) return;
+    if (adminCommunities.length === 0) return;
+
+    const stored = localStorage.getItem(ACTIVE_COMMUNITY_KEY);
+    const valid = adminCommunities.find((c) => c.id === stored);
+    if (!valid) {
+      const first = adminCommunities[0].id;
+      localStorage.setItem(ACTIVE_COMMUNITY_KEY, first);
+      setActiveCommunityIdState(first);
+    }
+  }, [user, isSuperAdmin, adminCommunities]);
+
+  const setActiveCommunity = useCallback((id: string) => {
+    localStorage.setItem(ACTIVE_COMMUNITY_KEY, id);
+    setActiveCommunityIdState(id);
+  }, []);
+
+  const login = useCallback(async (token: string) => {
     setToken(token);
-    setUser(userFromToken(token));
-  };
+    setLoading(true);
+    try {
+      const profile = await fetchProfile();
+      setUser(profile);
+    } catch {
+      clearToken();
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearToken();
+    localStorage.removeItem(ACTIVE_COMMUNITY_KEY);
     setUser(null);
+    setActiveCommunityIdState(null);
     queryClient.clear();
-  };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       isAuthenticated: user !== null,
-      isAdmin: user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN,
+      isSuperAdmin,
+      isCommunityAdmin,
+      activeCommunityId: isSuperAdmin ? null : activeCommunityId,
+      setActiveCommunity,
+      loading,
       login,
       logout,
     }),
-    [user],
+    [user, isSuperAdmin, isCommunityAdmin, activeCommunityId, setActiveCommunity, loading, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

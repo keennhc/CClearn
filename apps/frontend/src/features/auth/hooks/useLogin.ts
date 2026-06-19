@@ -7,9 +7,10 @@ export function useLogin() {
   const { login: setSession } = useAuth();
 
   return useMutation({
-    mutationFn: (credentials: LoginRequest) => login(credentials),
-    onSuccess: (data) => {
-      setSession(data.accessToken);
+    mutationFn: async (credentials: LoginRequest) => {
+      const data = await login(credentials);
+      await setSession(data.accessToken);
+      return data;
     },
   });
 }

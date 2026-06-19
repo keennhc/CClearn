@@ -2,6 +2,7 @@ export interface Announcement {
   id: string;
   title: string;
   content: string;
+  communityId: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;

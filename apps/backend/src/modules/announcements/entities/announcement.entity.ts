@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Community } from '../../communities/entities/community.entity';
 
 @Entity('announcements')
 export class Announcement {
@@ -23,9 +24,16 @@ export class Announcement {
   @Column()
   createdBy: string;
 
+  @Column()
+  communityId: string;
+
   @ManyToOne(() => User, (user) => user.announcements, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'createdBy' })
   author: User;
+
+  @ManyToOne(() => Community, (community) => community.announcements, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'communityId' })
+  community: Community;
 
   @CreateDateColumn()
   createdAt: Date;

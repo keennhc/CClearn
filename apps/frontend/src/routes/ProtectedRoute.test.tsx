@@ -12,8 +12,39 @@ import { useAuth } from '../features/auth/context/AuthContext';
 const mockUseAuth = useAuth as ReturnType<typeof vi.fn>;
 
 describe('ProtectedRoute', () => {
-  it('renders children when authenticated', () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: true });
+  it('renders children when authenticated as SUPER_ADMIN', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isSuperAdmin: true,
+      isCommunityAdmin: false,
+      loading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <div>Dashboard</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+  });
+
+  it('renders children when authenticated as COMMUNITY_ADMIN', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isSuperAdmin: false,
+      isCommunityAdmin: true,
+      loading: false,
+    });
 
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
@@ -34,7 +65,12 @@ describe('ProtectedRoute', () => {
   });
 
   it('redirects to /login when not authenticated', () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false });
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      isSuperAdmin: false,
+      isCommunityAdmin: false,
+      loading: false,
+    });
 
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
@@ -54,5 +90,32 @@ describe('ProtectedRoute', () => {
 
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
     expect(screen.getByText('Login Page')).toBeInTheDocument();
+  });
+
+  it('shows access denied for users without admin role', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      isSuperAdmin: false,
+      isCommunityAdmin: false,
+      loading: false,
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <div>Dashboard</div>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('Access Denied')).toBeInTheDocument();
   });
 });

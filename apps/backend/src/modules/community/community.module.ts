@@ -4,9 +4,13 @@ import { CommunityMessage } from './entities/community-message.entity';
 import { CommunityService } from './community.service';
 import { CommunityController } from './community.controller';
 import { CommunityGateway } from './community.gateway';
+import { CommunitiesModule } from '../communities/communities.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CommunityMessage])],
+  imports: [
+    TypeOrmModule.forFeature([CommunityMessage]),
+    CommunitiesModule,
+  ],
   controllers: [CommunityController],
   providers: [CommunityService, CommunityGateway],
   exports: [CommunityService],

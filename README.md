@@ -1,6 +1,6 @@
 # Home Owners Hub
 
-Admin portal MVP for a homeowners community platform: authentication, community chat, and an announcements feed, managed through an admin portal.
+Multi-community platform for homeowners. Each community has its own members, chat, and announcements. Super admins manage all communities globally; community admins manage their own community through a scoped portal view.
 
 ## Stack
 
@@ -19,7 +19,7 @@ pnpm init:project
 pnpm dev
 ```
 
-`pnpm init:project` handles everything: installs dependencies, copies `.env` files, starts Docker services (Postgres + LocalStack S3), runs migrations, and seeds the default admin user. It is safe to re-run.
+`pnpm init:project` handles everything: installs dependencies, copies `.env` files, starts Docker services (Postgres + LocalStack S3), runs migrations, and seeds the default admin user + default community. It is safe to re-run.
 
 ### Default admin login
 
@@ -56,7 +56,7 @@ pnpm --filter frontend test
 | --- | --- |
 | `pnpm init:project` | One-command init: install, env files, Docker, migrations, seed |
 | `pnpm db:start` | Start DB in Docker and run migrations |
-| `pnpm db:seed` | Seed the default admin user |
+| `pnpm db:seed` | Seed the default admin user and community |
 | `pnpm dev` | Run backend and frontend in watch mode (DB via Docker) |
 | `pnpm dev:api` | Run backend only |
 | `pnpm dev:frontend` | Run frontend only |

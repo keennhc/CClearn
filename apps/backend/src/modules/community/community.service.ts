@@ -19,11 +19,12 @@ export class CommunityService {
     private readonly gateway: CommunityGateway,
   ) {}
 
-  async findAll(query: PaginationQueryDto): Promise<PaginatedResult<CommunityMessageDto>> {
+  async findAll(communityId: string, query: PaginationQueryDto): Promise<PaginatedResult<CommunityMessageDto>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
     const [items, total] = await this.messagesRepository.findAndCount({
+      where: { communityId },
       relations: { user: true },
       order: { createdAt: 'ASC' },
       skip: (page - 1) * limit,
@@ -38,9 +39,10 @@ export class CommunityService {
     };
   }
 
-  async create(userId: string, dto: CreateMessageDto): Promise<CommunityMessageDto> {
+  async create(communityId: string, userId: string, dto: CreateMessageDto): Promise<CommunityMessageDto> {
     const message = this.messagesRepository.create({
       message: dto.message ?? null,
+      communityId,
       userId,
       attachmentUrl: dto.attachmentUrl ?? null,
       attachmentType: dto.attachmentType ?? null,
@@ -55,7 +57,7 @@ export class CommunityService {
       throw new NotFoundException('Message not found');
     }
     const result = this.toDto(withUser);
-    this.gateway.broadcastMessage(result);
+    this.gateway.broadcastMessage(communityId, result);
     return result;
   }
 
@@ -67,6 +69,7 @@ export class CommunityService {
     return {
       id: message.id,
       message: message.message,
+      communityId: message.communityId,
       userId: message.userId,
       userName: `${message.user.firstName} ${message.user.lastName}`,
       userRole: message.user.role,

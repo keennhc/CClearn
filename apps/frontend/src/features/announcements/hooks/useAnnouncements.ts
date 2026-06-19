@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { getAnnouncements } from '../api/announcementsApi';
 
-export function useAnnouncements() {
+export function useAnnouncements(communityId: string) {
   return useQuery({
-    queryKey: ['announcements'],
-    queryFn: getAnnouncements,
+    queryKey: ['announcements', communityId],
+    queryFn: () => getAnnouncements(communityId),
+    enabled: !!communityId,
   });
 }

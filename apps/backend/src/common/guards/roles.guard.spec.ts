@@ -53,19 +53,19 @@ describe('RolesGuard', () => {
   });
 
   it('allows access when user has a required role', () => {
-    reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+    reflector.getAllAndOverride.mockReturnValue([UserRole.SUPER_ADMIN]);
 
     const context = {
       getHandler: jest.fn(),
       getClass: jest.fn(),
-      switchToHttp: () => ({ getRequest: () => ({ user: { role: UserRole.ADMIN } }) }),
+      switchToHttp: () => ({ getRequest: () => ({ user: { role: UserRole.SUPER_ADMIN } }) }),
     } as unknown as ExecutionContext;
 
     expect(guard.canActivate(context)).toBe(true);
   });
 
   it('denies access when user does not have a required role', () => {
-    reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+    reflector.getAllAndOverride.mockReturnValue([UserRole.SUPER_ADMIN]);
 
     const context = {
       getHandler: jest.fn(),
@@ -77,7 +77,7 @@ describe('RolesGuard', () => {
   });
 
   it('denies access when user is undefined', () => {
-    reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+    reflector.getAllAndOverride.mockReturnValue([UserRole.SUPER_ADMIN]);
 
     const context = {
       getHandler: jest.fn(),
@@ -89,7 +89,7 @@ describe('RolesGuard', () => {
   });
 
   it('allows SUPER_ADMIN access to any role-protected route', () => {
-    reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+    reflector.getAllAndOverride.mockReturnValue([UserRole.SUPER_ADMIN]);
 
     const context = {
       getHandler: jest.fn(),
@@ -101,14 +101,14 @@ describe('RolesGuard', () => {
   });
 
   it('checks both ROLES_KEY values from handler and class', () => {
-    reflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+    reflector.getAllAndOverride.mockReturnValue([UserRole.SUPER_ADMIN]);
     const handler = jest.fn();
     const cls = jest.fn();
 
     const context = {
       getHandler: () => handler,
       getClass: () => cls,
-      switchToHttp: () => ({ getRequest: () => ({ user: { role: UserRole.ADMIN } }) }),
+      switchToHttp: () => ({ getRequest: () => ({ user: { role: UserRole.SUPER_ADMIN } }) }),
     } as unknown as ExecutionContext;
 
     guard.canActivate(context);

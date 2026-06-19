@@ -9,43 +9,50 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { UserRole } from '@home-owners-hub/shared-types';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { CommunityMemberGuard } from '../../common/guards/community-member.guard';
+import { CommunityAdminGuard } from '../../common/guards/community-admin.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AnnouncementsService } from './announcements.service';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 
-@Controller('announcements')
-@UseGuards(JwtAuthGuard)
+@Controller('communities/:communityId/announcements')
+@UseGuards(JwtAuthGuard, CommunityMemberGuard)
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Get()
-  findAll() {
-    return this.announcementsService.findAll();
+  findAll(@Param('communityId', ParseUUIDPipe) communityId: string) {
+    return this.announcementsService.findAll(communityId);
   }
 
   @Post()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  create(@CurrentUser() user: { id: string }, @Body() dto: CreateAnnouncementDto) {
-    return this.announcementsService.create(user.id, dto);
+  @UseGuards(CommunityAdminGuard)
+  create(
+    @Param('communityId', ParseUUIDPipe) communityId: string,
+    @CurrentUser() user: { id: string },
+    @Body() dto: CreateAnnouncementDto,
+  ) {
+    return this.announcementsService.create(communityId, user.id, dto);
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateAnnouncementDto) {
-    return this.announcementsService.update(id, dto);
+  @UseGuards(CommunityAdminGuard)
+  update(
+    @Param('communityId', ParseUUIDPipe) communityId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateAnnouncementDto,
+  ) {
+    return this.announcementsService.update(communityId, id, dto);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.announcementsService.remove(id);
+  @UseGuards(CommunityAdminGuard)
+  remove(
+    @Param('communityId', ParseUUIDPipe) communityId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.announcementsService.remove(communityId, id);
   }
 }

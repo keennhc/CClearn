@@ -8,6 +8,7 @@ import { CommunityModule } from './modules/community/community.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { CommunitiesModule } from './modules/communities/communities.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { UploadModule } from './modules/upload/upload.module';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    CommunitiesModule,
     CommunityModule,
     AnnouncementsModule,
     DashboardModule,

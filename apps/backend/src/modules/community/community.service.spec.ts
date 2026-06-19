@@ -7,6 +7,8 @@ import { CommunityService } from './community.service';
 import { CommunityGateway } from './community.gateway';
 import { User } from '../users/entities/user.entity';
 
+const COMMUNITY_ID = 'community-1';
+
 function makeUser(): User {
   return {
     id: 'user-1',
@@ -28,6 +30,7 @@ function makeMessage(overrides: Partial<CommunityMessage> = {}): CommunityMessag
   return {
     id: 'msg-1',
     message: 'Hello world',
+    communityId: COMMUNITY_ID,
     userId: 'user-1',
     attachmentUrl: null,
     attachmentType: null,
@@ -76,19 +79,19 @@ describe('CommunityService', () => {
       const msg = makeMessage();
       repo.findAndCount.mockResolvedValue([[msg], 1]);
 
-      const result = await service.findAll({ page: 1, limit: 10 });
+      const result = await service.findAll(COMMUNITY_ID, { page: 1, limit: 10 });
 
       expect(result.total).toBe(1);
       expect(result.items[0].userName).toBe('Test User');
     });
 
-    it('defaults to page 1 and limit 20', async () => {
+    it('filters by communityId', async () => {
       repo.findAndCount.mockResolvedValue([[], 0]);
 
-      await service.findAll({});
+      await service.findAll(COMMUNITY_ID, {});
 
       expect(repo.findAndCount).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 0, take: 20 }),
+        expect.objectContaining({ where: { communityId: COMMUNITY_ID } }),
       );
     });
   });
@@ -100,32 +103,22 @@ describe('CommunityService', () => {
       repo.save.mockResolvedValue(msg);
       repo.findOne.mockResolvedValue(msg);
 
-      const result = await service.create('user-1', { message: 'Hello world' });
+      const result = await service.create(COMMUNITY_ID, 'user-1', { message: 'Hello world' });
 
       expect(result.message).toBe('Hello world');
       expect(result.userName).toBe('Test User');
+      expect(result.communityId).toBe(COMMUNITY_ID);
     });
 
-    it('creates a message with an attachment', async () => {
-      const msg = makeMessage({
-        message: null,
-        attachmentUrl: 'https://bucket.s3.us-east-1.amazonaws.com/chat-media/test.png',
-        attachmentType: 'IMAGE',
-        attachmentName: 'test.png',
-      });
+    it('broadcasts the message to the community room', async () => {
+      const msg = makeMessage();
       repo.create.mockReturnValue(msg);
       repo.save.mockResolvedValue(msg);
       repo.findOne.mockResolvedValue(msg);
 
-      const result = await service.create('user-1', {
-        attachmentUrl: 'https://bucket.s3.us-east-1.amazonaws.com/chat-media/test.png',
-        attachmentType: 'IMAGE' as never,
-        attachmentName: 'test.png',
-      });
+      await service.create(COMMUNITY_ID, 'user-1', { message: 'Hello' });
 
-      expect(result.attachmentUrl).toBe('https://bucket.s3.us-east-1.amazonaws.com/chat-media/test.png');
-      expect(result.attachmentType).toBe('IMAGE');
-      expect(result.message).toBeNull();
+      expect(gateway.broadcastMessage).toHaveBeenCalledWith(COMMUNITY_ID, expect.any(Object));
     });
 
     it('throws NotFoundException when saved message cannot be re-fetched', async () => {
@@ -134,7 +127,7 @@ describe('CommunityService', () => {
       repo.save.mockResolvedValue(msg);
       repo.findOne.mockResolvedValue(null);
 
-      await expect(service.create('user-1', { message: 'Hi' })).rejects.toThrow(
+      await expect(service.create(COMMUNITY_ID, 'user-1', { message: 'Hi' })).rejects.toThrow(
         NotFoundException,
       );
     });

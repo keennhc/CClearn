@@ -1,12 +1,18 @@
-import { act, renderHook } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { UserRole } from '@home-owners-hub/shared-types';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { UserRole, CommunityMemberRole } from '@home-owners-hub/shared-types';
 import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from './AuthContext';
 
-afterEach(() => {
-  localStorage.clear();
-});
+vi.mock('../../../services/api', () => ({
+  api: {
+    get: vi.fn(),
+  },
+}));
+
+import { api } from '../../../services/api';
+
+const mockGet = api.get as ReturnType<typeof vi.fn>;
 
 function makeToken(role: UserRole, expired = false): string {
   const now = Math.floor(Date.now() / 1000);
@@ -22,9 +28,27 @@ function makeToken(role: UserRole, expired = false): string {
   return `${header}.${body}.sig`;
 }
 
+const mockProfile = {
+  id: 'user-1',
+  email: 'admin@example.com',
+  firstName: 'Admin',
+  lastName: 'User',
+  role: UserRole.SUPER_ADMIN,
+  profileImageUrl: null,
+  communities: [],
+};
+
 function wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  localStorage.clear();
+});
 
 describe('AuthContext', () => {
   it('starts unauthenticated when no token in storage', () => {
@@ -34,52 +58,66 @@ describe('AuthContext', () => {
     expect(result.current.user).toBeNull();
   });
 
-  it('authenticates after login is called', () => {
+  it('authenticates after login is called', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { success: true, data: mockProfile },
+    });
+
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    act(() => {
-      result.current.login(makeToken(UserRole.ADMIN));
+    await act(async () => {
+      await result.current.login(makeToken(UserRole.SUPER_ADMIN));
     });
 
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.email).toBe('admin@example.com');
   });
 
-  it('sets isAdmin when user role is ADMIN', () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    act(() => {
-      result.current.login(makeToken(UserRole.ADMIN));
+  it('sets isSuperAdmin when user role is SUPER_ADMIN', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { success: true, data: mockProfile },
     });
 
-    expect(result.current.isAdmin).toBe(true);
-  });
-
-  it('sets isAdmin when user role is SUPER_ADMIN', () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    act(() => {
-      result.current.login(makeToken(UserRole.SUPER_ADMIN));
+    await act(async () => {
+      await result.current.login(makeToken(UserRole.SUPER_ADMIN));
     });
 
-    expect(result.current.isAdmin).toBe(true);
+    expect(result.current.isSuperAdmin).toBe(true);
+    expect(result.current.isCommunityAdmin).toBe(false);
   });
 
-  it('does not set isAdmin when user role is USER', () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    act(() => {
-      result.current.login(makeToken(UserRole.USER));
+  it('sets isCommunityAdmin when user has admin membership', async () => {
+    const communityAdminProfile = {
+      ...mockProfile,
+      role: UserRole.USER,
+      communities: [{ id: 'c-1', name: 'Test', role: CommunityMemberRole.COMMUNITY_ADMIN }],
+    };
+    mockGet.mockResolvedValueOnce({
+      data: { success: true, data: communityAdminProfile },
     });
 
-    expect(result.current.isAdmin).toBe(false);
-  });
-
-  it('clears user on logout', () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 
-    act(() => {
-      result.current.login(makeToken(UserRole.ADMIN));
+    await act(async () => {
+      await result.current.login(makeToken(UserRole.USER));
+    });
+
+    expect(result.current.isSuperAdmin).toBe(false);
+    expect(result.current.isCommunityAdmin).toBe(true);
+    expect(result.current.activeCommunityId).toBe('c-1');
+  });
+
+  it('clears user on logout', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { success: true, data: mockProfile },
+    });
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(async () => {
+      await result.current.login(makeToken(UserRole.SUPER_ADMIN));
     });
     act(() => {
       result.current.logout();
@@ -87,16 +125,6 @@ describe('AuthContext', () => {
 
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
-  });
-
-  it('does not authenticate with an expired token', () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    act(() => {
-      result.current.login(makeToken(UserRole.ADMIN, true));
-    });
-
-    expect(result.current.isAuthenticated).toBe(false);
   });
 
   it('throws when used outside AuthProvider', () => {

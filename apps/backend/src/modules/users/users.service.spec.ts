@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
@@ -169,24 +169,6 @@ describe('UsersService', () => {
       const result = await service.update(user.id, { firstName: 'Updated' });
 
       expect(result.firstName).toBe('Updated');
-    });
-
-    it('throws BadRequestException when deactivating an admin', async () => {
-      const admin = makeUser({ role: UserRole.ADMIN });
-      repo.findOne.mockResolvedValue(admin);
-
-      await expect(service.update(admin.id, { isActive: false })).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
-    it('throws BadRequestException when promoting to ADMIN while setting inactive', async () => {
-      const user = makeUser({ role: UserRole.USER });
-      repo.findOne.mockResolvedValue(user);
-
-      await expect(
-        service.update(user.id, { role: UserRole.ADMIN, isActive: false }),
-      ).rejects.toThrow(BadRequestException);
     });
 
     it('throws ForbiddenException when updating a SUPER_ADMIN user', async () => {

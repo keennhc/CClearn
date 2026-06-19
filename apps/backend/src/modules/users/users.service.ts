@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ILike, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -88,11 +88,6 @@ export class UsersService {
       throw new ForbiddenException('Cannot assign SUPER_ADMIN role');
     }
 
-    const effectiveRole = dto.role ?? user.role;
-    if (effectiveRole === UserRole.ADMIN && dto.isActive === false) {
-      throw new BadRequestException('Admin users cannot be deactivated');
-    }
-
     if (dto.email && dto.email !== user.email) {
       const existing = await this.findByEmail(dto.email);
       if (existing) {
@@ -111,6 +106,11 @@ export class UsersService {
       throw new ForbiddenException('Super admin users cannot be deleted');
     }
     await this.usersRepository.remove(user);
+  }
+
+  async createRaw(data: { email: string; passwordHash: string; firstName: string; lastName: string }): Promise<User> {
+    const user = this.usersRepository.create(data);
+    return this.usersRepository.save(user);
   }
 
   async count(): Promise<number> {

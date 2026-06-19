@@ -4,15 +4,19 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Announcement } from './entities/announcement.entity';
 import { AnnouncementsService } from './announcements.service';
 
+const COMMUNITY_ID = 'community-1';
+
 function makeAnnouncement(overrides: Partial<Announcement> = {}): Announcement {
   return {
     id: 'ann-1',
     title: 'Test Title',
     content: 'Test content.',
+    communityId: COMMUNITY_ID,
     createdBy: 'user-1',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     author: {} as never,
+    community: {} as never,
     ...overrides,
   } as Announcement;
 }
@@ -49,15 +53,18 @@ describe('AnnouncementsService', () => {
   });
 
   describe('findAll', () => {
-    it('returns all announcements ordered by createdAt DESC', async () => {
+    it('returns all announcements for a community ordered by createdAt DESC', async () => {
       const ann = makeAnnouncement();
       repo.find.mockResolvedValue([ann]);
 
-      const result = await service.findAll();
+      const result = await service.findAll(COMMUNITY_ID);
 
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe(ann.title);
-      expect(repo.find).toHaveBeenCalledWith({ order: { createdAt: 'DESC' } });
+      expect(repo.find).toHaveBeenCalledWith({
+        where: { communityId: COMMUNITY_ID },
+        order: { createdAt: 'DESC' },
+      });
     });
   });
 
@@ -67,13 +74,13 @@ describe('AnnouncementsService', () => {
       repo.create.mockReturnValue(ann);
       repo.save.mockResolvedValue(ann);
 
-      const result = await service.create('user-1', {
+      const result = await service.create(COMMUNITY_ID, 'user-1', {
         title: ann.title,
         content: ann.content,
       });
 
       expect(result.title).toBe(ann.title);
-      expect(result.createdBy).toBe(ann.createdBy);
+      expect(result.communityId).toBe(COMMUNITY_ID);
     });
   });
 
@@ -84,7 +91,7 @@ describe('AnnouncementsService', () => {
       repo.findOne.mockResolvedValue(ann);
       repo.save.mockResolvedValue(updated);
 
-      const result = await service.update(ann.id, { title: 'Updated' });
+      const result = await service.update(COMMUNITY_ID, ann.id, { title: 'Updated' });
 
       expect(result.title).toBe('Updated');
     });
@@ -92,7 +99,7 @@ describe('AnnouncementsService', () => {
     it('throws NotFoundException when not found', async () => {
       repo.findOne.mockResolvedValue(null);
 
-      await expect(service.update('missing', { title: 'X' })).rejects.toThrow(
+      await expect(service.update(COMMUNITY_ID, 'missing', { title: 'X' })).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -104,7 +111,7 @@ describe('AnnouncementsService', () => {
       repo.findOne.mockResolvedValue(ann);
       repo.remove.mockResolvedValue(undefined);
 
-      await service.remove(ann.id);
+      await service.remove(COMMUNITY_ID, ann.id);
 
       expect(repo.remove).toHaveBeenCalledWith(ann);
     });
@@ -112,7 +119,7 @@ describe('AnnouncementsService', () => {
     it('throws NotFoundException when not found', async () => {
       repo.findOne.mockResolvedValue(null);
 
-      await expect(service.remove('missing')).rejects.toThrow(NotFoundException);
+      await expect(service.remove(COMMUNITY_ID, 'missing')).rejects.toThrow(NotFoundException);
     });
   });
 

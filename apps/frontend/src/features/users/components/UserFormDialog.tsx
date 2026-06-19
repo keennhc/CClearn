@@ -203,10 +203,10 @@ export function UserFormDialog({ open, user, loading, error, onSubmit, onClose }
               onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as UserRole }))}
             >
               <MenuItem value={UserRole.USER}>User</MenuItem>
-              <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+              <MenuItem value={UserRole.SUPER_ADMIN}>Super Admin</MenuItem>
             </Select>
           </FormControl>
-          {isEdit && form.role !== UserRole.ADMIN && form.role !== UserRole.SUPER_ADMIN ? (
+          {isEdit && form.role !== UserRole.SUPER_ADMIN ? (
             <FormControlLabel
               control={
                 <Switch

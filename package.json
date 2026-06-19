@@ -6,6 +6,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "predev": "lsof -ti:3000 | xargs kill 2>/dev/null; true",
+    "predev:api": "lsof -ti:3000 | xargs kill 2>/dev/null; true",
     "dev": "concurrently -n backend,frontend -c blue,green \"pnpm --filter backend start:dev\" \"pnpm --filter frontend dev\"",
     "dev:api": "pnpm --filter backend start:dev",
     "dev:frontend": "pnpm --filter frontend dev",

@@ -11,19 +11,17 @@ import type {
 import { LoadingState } from '../../../components/LoadingState';
 import { EmptyState } from '../../../components/EmptyState';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
-import { useAuth } from '../../auth/context/AuthContext';
 import { useAnnouncements } from '../hooks/useAnnouncements';
 import { useCreateAnnouncement } from '../hooks/useCreateAnnouncement';
 import { useUpdateAnnouncement } from '../hooks/useUpdateAnnouncement';
 import { useDeleteAnnouncement } from '../hooks/useDeleteAnnouncement';
 import { AnnouncementFormDialog } from '../components/AnnouncementFormDialog';
 
-export function AnnouncementsPage() {
-  const { isAdmin } = useAuth();
-  const { data, isLoading, isError } = useAnnouncements();
-  const createMutation = useCreateAnnouncement();
-  const updateMutation = useUpdateAnnouncement();
-  const deleteMutation = useDeleteAnnouncement();
+export function AnnouncementsPage({ communityId }: { communityId: string }) {
+  const { data, isLoading, isError } = useAnnouncements(communityId);
+  const createMutation = useCreateAnnouncement(communityId);
+  const updateMutation = useUpdateAnnouncement(communityId);
+  const deleteMutation = useDeleteAnnouncement(communityId);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Announcement | null>(null);
@@ -65,11 +63,9 @@ export function AnnouncementsPage() {
         <Typography variant="h4" fontWeight={600}>
           Announcements
         </Typography>
-        {isAdmin ? (
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
-            New Announcement
-          </Button>
-        ) : null}
+        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
+          New Announcement
+        </Button>
       </Stack>
 
       {isLoading ? <LoadingState /> : null}
@@ -89,16 +85,14 @@ export function AnnouncementsPage() {
                     {new Date(announcement.createdAt).toLocaleString()}
                   </Typography>
                 </Box>
-                {isAdmin ? (
-                  <Stack direction="row">
-                    <IconButton size="small" onClick={() => handleOpenEdit(announcement)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleting(announcement)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
-                ) : null}
+                <Stack direction="row">
+                  <IconButton size="small" onClick={() => handleOpenEdit(announcement)}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setDeleting(announcement)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
               </Stack>
               <Typography variant="body1" whiteSpace="pre-wrap" mt={1}>
                 {announcement.content}

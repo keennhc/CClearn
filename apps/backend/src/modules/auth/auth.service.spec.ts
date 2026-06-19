@@ -5,11 +5,13 @@ import * as bcrypt from 'bcrypt';
 import { UserRole } from '@home-owners-hub/shared-types';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { CommunitiesService } from '../communities/communities.service';
 import { User } from '../users/entities/user.entity';
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let usersService: { findByEmail: jest.Mock };
+  let usersService: { findByEmail: jest.Mock; findOne: jest.Mock; createRaw: jest.Mock };
+  let communitiesService: { getUserCommunities: jest.Mock; joinByCode: jest.Mock; create: jest.Mock };
   let jwtService: { sign: jest.Mock };
 
   const password = 'Password1!';
@@ -29,17 +31,20 @@ describe('AuthService', () => {
       lastName: 'Dent',
       role: UserRole.USER,
       isActive: true,
+      profileImageUrl: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     } as User;
 
-    usersService = { findByEmail: jest.fn() };
+    usersService = { findByEmail: jest.fn(), findOne: jest.fn(), createRaw: jest.fn() };
+    communitiesService = { getUserCommunities: jest.fn(), joinByCode: jest.fn(), create: jest.fn() };
     jwtService = { sign: jest.fn().mockReturnValue('signed-jwt') };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: usersService },
+        { provide: CommunitiesService, useValue: communitiesService },
         { provide: JwtService, useValue: jwtService },
       ],
     }).compile();
@@ -91,6 +96,19 @@ describe('AuthService', () => {
         role: user.role,
       });
       expect(result).toEqual({ accessToken: 'signed-jwt' });
+    });
+  });
+
+  describe('getProfile', () => {
+    it('returns user profile with communities', async () => {
+      usersService.findOne.mockResolvedValue(user);
+      communitiesService.getUserCommunities.mockResolvedValue([]);
+
+      const result = await authService.getProfile(user.id);
+
+      expect(result.id).toBe(user.id);
+      expect(result.email).toBe(user.email);
+      expect(result.communities).toEqual([]);
     });
   });
 });

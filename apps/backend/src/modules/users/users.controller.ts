@@ -21,7 +21,7 @@ import { QueryUsersDto } from './dto/query-users.dto';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+@Roles(UserRole.SUPER_ADMIN)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
