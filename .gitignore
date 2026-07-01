@@ -21,3 +21,7 @@ coverage/
 
 # OS
 .DS_Store
+
+# Mobile app planning docs (separate project)
+AppCLAUDE.md
+appPlan.md
