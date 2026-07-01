@@ -36,6 +36,7 @@ export class CommunityService {
       total,
       page,
       limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -72,6 +73,8 @@ export class CommunityService {
       communityId: message.communityId,
       userId: message.userId,
       userName: `${message.user.firstName} ${message.user.lastName}`,
+      senderFirstName: message.user.firstName,
+      senderLastName: message.user.lastName,
       userRole: message.user.role,
       attachmentUrl: message.attachmentUrl ?? null,
       attachmentType: (message.attachmentType as AttachmentType) ?? null,

@@ -208,7 +208,7 @@ export function CommunityChatPage({ communityId }: { communityId: string }) {
         <div ref={bottomCallbackRef} />
       </Paper>
 
-      <Box mt={2} pb={2}>
+      <Box mt={2} pb={3}>
         {attachment ? (
           <Chip
             label={attachment.name}

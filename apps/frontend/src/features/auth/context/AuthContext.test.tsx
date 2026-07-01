@@ -92,7 +92,7 @@ describe('AuthContext', () => {
     const communityAdminProfile = {
       ...mockProfile,
       role: UserRole.USER,
-      communities: [{ id: 'c-1', name: 'Test', role: CommunityMemberRole.COMMUNITY_ADMIN }],
+      communities: [{ communityId: 'c-1', communityName: 'Test', role: CommunityMemberRole.COMMUNITY_ADMIN }],
     };
     mockGet.mockResolvedValueOnce({
       data: { success: true, data: communityAdminProfile },
@@ -106,7 +106,7 @@ describe('AuthContext', () => {
 
     expect(result.current.isSuperAdmin).toBe(false);
     expect(result.current.isCommunityAdmin).toBe(true);
-    expect(result.current.activeCommunityId).toBe('c-1');
+    expect(result.current.activeCommunityId).toBe('c-1'); // communityId field
   });
 
   it('clears user on logout', async () => {

@@ -115,11 +115,44 @@ Requires authentication. Returns current user profile with community memberships
     "profileImageUrl": "string | null",
     "communities": [
       {
-        "id": "uuid",
-        "name": "string",
+        "communityId": "uuid",
+        "communityName": "string",
         "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
       }
     ]
+  }
+}
+```
+
+---
+
+### PATCH /auth/me
+
+Requires authentication. Update the current user's profile fields. All fields are optional.
+
+**Request body**
+
+```json
+{
+  "firstName": "string (optional)",
+  "lastName": "string (optional)",
+  "profileImageUrl": "string | null (optional)"
+}
+```
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "role": "SUPER_ADMIN | USER",
+    "profileImageUrl": "string | null",
+    "communities": [...]
   }
 }
 ```
@@ -230,7 +263,8 @@ List all users. Supports optional search by name or email, with pagination.
     ],
     "total": 0,
     "page": 1,
-    "limit": 20
+    "limit": 20,
+    "totalPages": 0
   }
 }
 ```
@@ -403,7 +437,8 @@ Requires `SUPER_ADMIN` role. List all active communities with inline stats.
     ],
     "total": 0,
     "page": 1,
-    "limit": 20
+    "limit": 20,
+    "totalPages": 0
   }
 }
 ```
@@ -412,7 +447,7 @@ Requires `SUPER_ADMIN` role. List all active communities with inline stats.
 
 ### GET /communities/mine
 
-Requires authentication. Returns communities the current user belongs to.
+Requires authentication. Returns full community objects for all communities the current user belongs to.
 
 **Response**
 
@@ -423,7 +458,15 @@ Requires authentication. Returns communities the current user belongs to.
     {
       "id": "uuid",
       "name": "string",
-      "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
+      "code": "string",
+      "description": "string | null",
+      "isActive": true,
+      "memberCount": 0,
+      "messageCount": 0,
+      "announcementCount": 0,
+      "createdBy": "uuid",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
     }
   ]
 }
@@ -445,17 +488,23 @@ Requires authentication. Join a community by code as `COMMUNITY_MEMBER`.
 
 **Response**
 
+Returns the full community object the user just joined.
+
 ```json
 {
   "success": true,
   "data": {
     "id": "uuid",
-    "userId": "uuid",
-    "communityId": "uuid",
-    "role": "COMMUNITY_MEMBER",
-    "userName": "string",
-    "userEmail": "string",
-    "joinedAt": "ISO8601"
+    "name": "string",
+    "code": "string",
+    "description": "string | null",
+    "isActive": true,
+    "memberCount": 0,
+    "messageCount": 0,
+    "announcementCount": 0,
+    "createdBy": "uuid",
+    "createdAt": "ISO8601",
+    "updatedAt": "ISO8601"
   }
 }
 ```
@@ -611,13 +660,44 @@ List community members. Supports search by name or email, with pagination.
         "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER",
         "userName": "string",
         "userEmail": "string",
+        "firstName": "string",
+        "lastName": "string",
         "joinedAt": "ISO8601"
       }
     ],
     "total": 0,
     "page": 1,
-    "limit": 20
+    "limit": 20,
+    "totalPages": 0
   }
+}
+```
+
+---
+
+### GET /communities/:id/non-members
+
+Requires `SUPER_ADMIN` or `COMMUNITY_ADMIN` of the community. Search for users who are not members of the community. Used to find users when adding new members. Returns up to 20 results.
+
+**Query params**
+
+| Param | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| search | string | No | | Filter by name or email |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "email": "string",
+      "firstName": "string",
+      "lastName": "string"
+    }
+  ]
 }
 ```
 
@@ -632,7 +712,7 @@ Add a member by email. The user must already have an account.
 ```json
 {
   "email": "string",
-  "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER"
+  "role": "COMMUNITY_ADMIN | COMMUNITY_MEMBER (optional, defaults to COMMUNITY_MEMBER)"
 }
 ```
 
@@ -733,7 +813,8 @@ Get community chat messages, ordered oldest to newest. Supports pagination.
     ],
     "total": 0,
     "page": 1,
-    "limit": 20
+    "limit": 20,
+    "totalPages": 0
   }
 }
 ```
@@ -797,6 +878,8 @@ Returns all announcements for the community, ordered newest first.
       "content": "string",
       "communityId": "uuid",
       "createdBy": "uuid",
+      "authorFirstName": "string",
+      "authorLastName": "string",
       "createdAt": "ISO8601",
       "updatedAt": "ISO8601"
     }

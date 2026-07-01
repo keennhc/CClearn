@@ -58,7 +58,7 @@ export class CommunitiesService {
 
     const [items, total] = await qb.getManyAndCount();
     const dtos = await Promise.all(items.map((c) => this.toDto(c)));
-    return { items: dtos, total, page, limit };
+    return { items: dtos, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(id: string): Promise<CommunityDto> {
@@ -145,6 +145,7 @@ export class CommunitiesService {
       total,
       page,
       limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -193,7 +194,7 @@ export class CommunitiesService {
     const member = this.memberRepo.create({
       userId: user.id,
       communityId,
-      role: dto.role,
+      role: dto.role ?? CommunityMemberRole.COMMUNITY_MEMBER,
     });
     const saved = await this.memberRepo.save(member);
     const withUser = await this.memberRepo.findOne({
@@ -253,7 +254,7 @@ export class CommunitiesService {
     return community;
   }
 
-  async joinByCode(userId: string, code: string): Promise<CommunityMemberDto> {
+  async joinByCode(userId: string, code: string): Promise<CommunityDto> {
     const community = await this.findByCode(code);
 
     const existing = await this.memberRepo.findOne({
@@ -263,20 +264,27 @@ export class CommunitiesService {
       throw new ConflictException('Already a member of this community');
     }
 
-    const member = this.memberRepo.create({
-      userId,
-      communityId: community.id,
-      role: CommunityMemberRole.COMMUNITY_MEMBER,
-    });
-    const saved = await this.memberRepo.save(member);
-    const withUser = await this.memberRepo.findOne({
-      where: { id: saved.id },
-      relations: { user: true },
-    });
-    return this.toMemberDto(withUser!);
+    await this.memberRepo.save(
+      this.memberRepo.create({
+        userId,
+        communityId: community.id,
+        role: CommunityMemberRole.COMMUNITY_MEMBER,
+      }),
+    );
+
+    return this.toDto(community);
   }
 
-  async getUserCommunities(userId: string): Promise<{ id: string; name: string; role: CommunityMemberRole }[]> {
+  async getUserCommunities(userId: string): Promise<CommunityDto[]> {
+    const memberships = await this.memberRepo.find({
+      where: { userId },
+      relations: { community: true },
+    });
+    const active = memberships.filter((m) => m.community.isActive);
+    return Promise.all(active.map((m) => this.toDto(m.community)));
+  }
+
+  async getUserCommunityMemberships(userId: string): Promise<{ communityId: string; communityName: string; role: CommunityMemberRole }[]> {
     const memberships = await this.memberRepo.find({
       where: { userId },
       relations: { community: true },
@@ -284,8 +292,8 @@ export class CommunitiesService {
     return memberships
       .filter((m) => m.community.isActive)
       .map((m) => ({
-        id: m.community.id,
-        name: m.community.name,
+        communityId: m.community.id,
+        communityName: m.community.name,
         role: m.role,
       }));
   }
@@ -361,6 +369,8 @@ export class CommunitiesService {
       communityId: member.communityId,
       role: member.role,
       userName: `${member.user.firstName} ${member.user.lastName}`,
+      firstName: member.user.firstName,
+      lastName: member.user.lastName,
       userEmail: member.user.email,
       joinedAt: member.joinedAt.toISOString(),
     };

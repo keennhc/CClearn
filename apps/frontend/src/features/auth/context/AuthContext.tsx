@@ -66,9 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (adminCommunities.length === 0) return;
 
     const stored = localStorage.getItem(ACTIVE_COMMUNITY_KEY);
-    const valid = adminCommunities.find((c) => c.id === stored);
+    const valid = adminCommunities.find((c) => c.communityId === stored);
     if (!valid) {
-      const first = adminCommunities[0].id;
+      const first = adminCommunities[0].communityId;
       localStorage.setItem(ACTIVE_COMMUNITY_KEY, first);
       setActiveCommunityIdState(first);
     }

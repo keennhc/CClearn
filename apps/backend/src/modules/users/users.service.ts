@@ -39,6 +39,7 @@ export class UsersService {
       total,
       page,
       limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -110,6 +111,10 @@ export class UsersService {
 
   async createRaw(data: { email: string; passwordHash: string; firstName: string; lastName: string }): Promise<User> {
     const user = this.usersRepository.create(data);
+    return this.usersRepository.save(user);
+  }
+
+  async saveUser(user: User): Promise<User> {
     return this.usersRepository.save(user);
   }
 

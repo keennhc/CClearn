@@ -30,6 +30,8 @@ export interface CommunityMember {
   communityId: string;
   role: CommunityMemberRole;
   userName: string;
+  firstName: string;
+  lastName: string;
   userEmail: string;
   joinedAt: string;
 }
@@ -40,6 +42,8 @@ export interface CommunityMessage {
   communityId: string;
   userId: string;
   userName: string;
+  senderFirstName: string;
+  senderLastName: string;
   userRole: string;
   attachmentUrl: string | null;
   attachmentType: AttachmentType | null;

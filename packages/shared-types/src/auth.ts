@@ -23,8 +23,8 @@ export interface RegisterRequest {
 }
 
 export interface AuthCommunity {
-  id: string;
-  name: string;
+  communityId: string;
+  communityName: string;
   role: CommunityMemberRole;
 }
 

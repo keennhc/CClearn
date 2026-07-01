@@ -16,6 +16,7 @@ export class AnnouncementsService {
   async findAll(communityId: string): Promise<AnnouncementDto[]> {
     const announcements = await this.announcementsRepository.find({
       where: { communityId },
+      relations: { author: true },
       order: { createdAt: 'DESC' },
     });
     return announcements.map((announcement) => this.toDto(announcement));
@@ -29,14 +30,22 @@ export class AnnouncementsService {
       createdBy: userId,
     });
     const saved = await this.announcementsRepository.save(announcement);
-    return this.toDto(saved);
+    const withAuthor = await this.announcementsRepository.findOne({
+      where: { id: saved.id },
+      relations: { author: true },
+    });
+    return this.toDto(withAuthor!);
   }
 
   async update(communityId: string, id: string, dto: UpdateAnnouncementDto): Promise<AnnouncementDto> {
     const announcement = await this.findOneEntity(communityId, id);
     Object.assign(announcement, dto);
     const saved = await this.announcementsRepository.save(announcement);
-    return this.toDto(saved);
+    const withAuthor = await this.announcementsRepository.findOne({
+      where: { id: saved.id },
+      relations: { author: true },
+    });
+    return this.toDto(withAuthor!);
   }
 
   async remove(communityId: string, id: string): Promise<void> {
@@ -51,6 +60,7 @@ export class AnnouncementsService {
   private async findOneEntity(communityId: string, id: string): Promise<Announcement> {
     const announcement = await this.announcementsRepository.findOne({
       where: { id, communityId },
+      relations: { author: true },
     });
     if (!announcement) {
       throw new NotFoundException('Announcement not found');
@@ -65,6 +75,8 @@ export class AnnouncementsService {
       content: announcement.content,
       communityId: announcement.communityId,
       createdBy: announcement.createdBy,
+      authorFirstName: announcement.author?.firstName ?? '',
+      authorLastName: announcement.author?.lastName ?? '',
       createdAt: announcement.createdAt.toISOString(),
       updatedAt: announcement.updatedAt.toISOString(),
     };

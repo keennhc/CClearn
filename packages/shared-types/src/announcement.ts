@@ -4,6 +4,8 @@ export interface Announcement {
   content: string;
   communityId: string;
   createdBy: string;
+  authorFirstName: string;
+  authorLastName: string;
   createdAt: string;
   updatedAt: string;
 }

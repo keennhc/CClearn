@@ -15,7 +15,7 @@ function makeAnnouncement(overrides: Partial<Announcement> = {}): Announcement {
     createdBy: 'user-1',
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
-    author: {} as never,
+    author: { firstName: 'Jane', lastName: 'Smith' } as never,
     community: {} as never,
     ...overrides,
   } as Announcement;
@@ -61,8 +61,10 @@ describe('AnnouncementsService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].title).toBe(ann.title);
+      expect(result[0].authorFirstName).toBe('Jane');
       expect(repo.find).toHaveBeenCalledWith({
         where: { communityId: COMMUNITY_ID },
+        relations: { author: true },
         order: { createdAt: 'DESC' },
       });
     });
@@ -73,6 +75,7 @@ describe('AnnouncementsService', () => {
       const ann = makeAnnouncement();
       repo.create.mockReturnValue(ann);
       repo.save.mockResolvedValue(ann);
+      repo.findOne.mockResolvedValue(ann);
 
       const result = await service.create(COMMUNITY_ID, 'user-1', {
         title: ann.title,
@@ -81,14 +84,17 @@ describe('AnnouncementsService', () => {
 
       expect(result.title).toBe(ann.title);
       expect(result.communityId).toBe(COMMUNITY_ID);
+      expect(result.authorFirstName).toBe('Jane');
     });
   });
 
   describe('update', () => {
     it('updates and returns the announcement', async () => {
       const ann = makeAnnouncement();
-      const updated = { ...ann, title: 'Updated' };
-      repo.findOne.mockResolvedValue(ann);
+      const updated = makeAnnouncement({ title: 'Updated' });
+      repo.findOne
+        .mockResolvedValueOnce(ann)    // findOneEntity call
+        .mockResolvedValueOnce(updated); // re-fetch after save
       repo.save.mockResolvedValue(updated);
 
       const result = await service.update(COMMUNITY_ID, ann.id, { title: 'Updated' });

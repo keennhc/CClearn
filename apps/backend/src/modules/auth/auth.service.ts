@@ -65,7 +65,7 @@ export class AuthService {
 
   async getProfile(userId: string): Promise<AuthProfile> {
     const user = await this.usersService.findOne(userId);
-    const communities = await this.communitiesService.getUserCommunities(userId);
+    const communities = await this.communitiesService.getUserCommunityMemberships(userId);
     return {
       id: user.id,
       email: user.email,
@@ -75,5 +75,14 @@ export class AuthService {
       profileImageUrl: user.profileImageUrl ?? null,
       communities,
     };
+  }
+
+  async updateProfile(userId: string, dto: { firstName?: string; lastName?: string; profileImageUrl?: string | null }): Promise<AuthProfile> {
+    const user = await this.usersService.findOne(userId);
+    if (dto.firstName !== undefined) user.firstName = dto.firstName;
+    if (dto.lastName !== undefined) user.lastName = dto.lastName;
+    if (dto.profileImageUrl !== undefined) user.profileImageUrl = dto.profileImageUrl ?? null;
+    await this.usersService.saveUser(user);
+    return this.getProfile(userId);
   }
 }

@@ -58,7 +58,7 @@ export function AdminLayout() {
 
   const items = isSuperAdmin ? SUPER_ADMIN_ITEMS : COMMUNITY_ADMIN_ITEMS;
   const adminCommunities = user?.communities.filter((c) => c.role === 'COMMUNITY_ADMIN') ?? [];
-  const activeCommunityName = adminCommunities.find((c) => c.id === activeCommunityId)?.name;
+  const activeCommunityName = adminCommunities.find((c) => c.communityId === activeCommunityId)?.communityName;
 
   const drawerContent = (
     <div>
@@ -120,7 +120,7 @@ export function AdminLayout() {
                 sx={{ color: 'white', '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.3)' } }}
               >
                 {adminCommunities.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                  <MenuItem key={c.communityId} value={c.communityId}>{c.communityName}</MenuItem>
                 ))}
               </Select>
             </FormControl>

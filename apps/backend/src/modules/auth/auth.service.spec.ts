@@ -10,8 +10,8 @@ import { User } from '../users/entities/user.entity';
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let usersService: { findByEmail: jest.Mock; findOne: jest.Mock; createRaw: jest.Mock };
-  let communitiesService: { getUserCommunities: jest.Mock; joinByCode: jest.Mock; create: jest.Mock };
+  let usersService: { findByEmail: jest.Mock; findOne: jest.Mock; createRaw: jest.Mock; saveUser: jest.Mock };
+  let communitiesService: { getUserCommunityMemberships: jest.Mock; joinByCode: jest.Mock; create: jest.Mock };
   let jwtService: { sign: jest.Mock };
 
   const password = 'Password1!';
@@ -36,8 +36,8 @@ describe('AuthService', () => {
       updatedAt: new Date(),
     } as User;
 
-    usersService = { findByEmail: jest.fn(), findOne: jest.fn(), createRaw: jest.fn() };
-    communitiesService = { getUserCommunities: jest.fn(), joinByCode: jest.fn(), create: jest.fn() };
+    usersService = { findByEmail: jest.fn(), findOne: jest.fn(), createRaw: jest.fn(), saveUser: jest.fn() };
+    communitiesService = { getUserCommunityMemberships: jest.fn(), joinByCode: jest.fn(), create: jest.fn() };
     jwtService = { sign: jest.fn().mockReturnValue('signed-jwt') };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -102,7 +102,7 @@ describe('AuthService', () => {
   describe('getProfile', () => {
     it('returns user profile with communities', async () => {
       usersService.findOne.mockResolvedValue(user);
-      communitiesService.getUserCommunities.mockResolvedValue([]);
+      communitiesService.getUserCommunityMemberships.mockResolvedValue([]);
 
       const result = await authService.getProfile(user.id);
 
