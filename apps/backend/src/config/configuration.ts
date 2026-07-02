@@ -18,6 +18,10 @@ export interface AppConfig {
     secretAccessKey: string;
     endpoint: string;
   };
+  gemini: {
+    apiKey: string;
+    model: string;
+  };
 }
 
 export default (): AppConfig => ({
@@ -39,5 +43,9 @@ export default (): AppConfig => ({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
     endpoint: process.env.AWS_S3_ENDPOINT ?? '',
+  },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY ?? '',
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
   },
 });

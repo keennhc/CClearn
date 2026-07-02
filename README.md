@@ -1,11 +1,12 @@
 # Home Owners Hub
 
-Multi-community platform for homeowners. Each community has its own members, chat, and announcements. Super admins manage all communities globally; community admins manage their own community through a scoped portal view.
+Multi-community platform for homeowners. Each community has its own members, chat, and announcements. Super admins manage all communities globally; community admins manage their own community through a scoped portal view. The admin portal also includes a general-purpose AI chat assistant powered by the Gemini API.
 
 ## Stack
 
 - Backend: NestJS, TypeORM, PostgreSQL, JWT authentication
 - Frontend: React, Vite, Material UI, React Query
+- AI: Gemini API (`@google/genai`)
 - Shared types: `packages/shared-types`
 - pnpm workspaces, Docker Compose
 
@@ -25,6 +26,10 @@ pnpm dev
 
 - Email: `admin@homeownershub.com`
 - Password: `Admin123!`
+
+### AI chat assistant
+
+The admin portal's floating AI chat widget requires a Gemini API key. Get a free one from [Google AI Studio](https://aistudio.google.com/apikey) and set `GEMINI_API_KEY` in `apps/backend/.env`. Without it, the assistant returns an "unavailable" error but the rest of the app works normally.
 
 ## Full Docker (all services)
 
@@ -85,6 +90,8 @@ pnpm --filter frontend test
 | `AWS_ACCESS_KEY_ID` | AWS access key | `test` |
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key | `test` |
 | `AWS_S3_ENDPOINT` | Custom S3 endpoint (for LocalStack) | `http://localhost:4566` |
+| `GEMINI_API_KEY` | Gemini API key for the AI chat assistant | _(empty)_ |
+| `GEMINI_MODEL` | Gemini model to use | `gemini-2.5-flash` |
 
 ### Frontend (`apps/frontend/.env`)
 

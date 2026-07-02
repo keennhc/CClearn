@@ -27,6 +27,8 @@ import ForumIcon from '@mui/icons-material/Forum';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../features/auth/context/AuthContext';
+import { AiChatWidgetProvider } from '../features/ai-chat/context/AiChatWidgetContext';
+import { AiChatWidget } from '../features/ai-chat/components/AiChatWidget';
 
 const DRAWER_WIDTH = 240;
 
@@ -165,6 +167,10 @@ export function AdminLayout() {
           <Outlet />
         </Box>
       </Box>
+
+      <AiChatWidgetProvider>
+        <AiChatWidget />
+      </AiChatWidgetProvider>
     </Box>
   );
 }

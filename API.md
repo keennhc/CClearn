@@ -954,6 +954,129 @@ Delete an announcement.
 
 ---
 
+## AI Chat
+
+General-purpose AI assistant for the admin portal, powered by the Gemini API. Not scoped to a community -- conversations belong to the requesting user.
+
+Access: `SUPER_ADMIN`, or `COMMUNITY_ADMIN` of at least one community.
+
+### GET /ai-chat/sessions
+
+Returns the current user's chat sessions, newest active first.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "title": "string",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
+    }
+  ]
+}
+```
+
+---
+
+### POST /ai-chat/sessions
+
+Create a new, empty chat session.
+
+**Response**
+
+Single session object (see above), with `title` initially `"New chat"`.
+
+---
+
+### GET /ai-chat/sessions/:id/messages
+
+Returns all messages in a session, oldest first.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "uuid",
+      "sessionId": "uuid",
+      "role": "user | model",
+      "content": "string",
+      "createdAt": "ISO8601"
+    }
+  ]
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 403 | Forbidden (session belongs to another user) |
+| 404 | Session not found |
+
+---
+
+### POST /ai-chat/sessions/:id/messages
+
+Send a message in a session. Persists the message, calls Gemini for a reply, persists and returns the reply.
+
+**Request body**
+
+```json
+{ "message": "string" }
+```
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "userMessage": { "id": "uuid", "sessionId": "uuid", "role": "user", "content": "string", "createdAt": "ISO8601" },
+    "reply": { "id": "uuid", "sessionId": "uuid", "role": "model", "content": "string", "createdAt": "ISO8601" }
+  }
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 403 | Forbidden (session belongs to another user) |
+| 404 | Session not found |
+| 429 | AI assistant is busy, try again shortly |
+| 502 | AI assistant is unavailable |
+
+---
+
+### DELETE /ai-chat/sessions/:id
+
+Delete a session and its messages.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**Errors**
+
+| Status | Message |
+|--------|---------|
+| 403 | Forbidden (session belongs to another user) |
+| 404 | Session not found |
+
+---
+
 ## Common Error Codes
 
 | Status | Meaning |
@@ -963,4 +1086,6 @@ Delete an announcement.
 | 403 | Insufficient role or not a community member |
 | 404 | Resource not found |
 | 409 | Conflict -- duplicate resource |
+| 429 | Rate limited by an upstream service (AI Chat) |
 | 500 | Internal server error |
+| 502 | Upstream service unavailable (AI Chat) |

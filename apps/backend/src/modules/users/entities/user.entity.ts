@@ -10,6 +10,7 @@ import {
 import { UserRole } from '@home-owners-hub/shared-types';
 import { CommunityMessage } from '../../community/entities/community-message.entity';
 import { Announcement } from '../../announcements/entities/announcement.entity';
+import { AiChatSession } from '../../ai-chat/entities/ai-chat-session.entity';
 
 @Entity('users')
 export class User {
@@ -49,4 +50,7 @@ export class User {
 
   @OneToMany(() => Announcement, (announcement) => announcement.author)
   announcements: Announcement[];
+
+  @OneToMany(() => AiChatSession, (session) => session.user)
+  aiChatSessions: AiChatSession[];
 }

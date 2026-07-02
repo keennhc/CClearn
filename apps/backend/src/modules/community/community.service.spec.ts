@@ -23,6 +23,7 @@ function makeUser(): User {
     updatedAt: new Date('2024-01-01'),
     messages: [],
     announcements: [],
+    aiChatSessions: [],
   } as User;
 }
 

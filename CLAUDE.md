@@ -9,6 +9,7 @@ Primary features:
 3. Community-scoped chat
 4. Community-scoped announcements
 5. Role-based admin portal (SUPER_ADMIN global view, COMMUNITY_ADMIN scoped view)
+6. AI chat assistant for admins (general-purpose, powered by the Gemini API)
 
 Do not implement additional homeowner management features unless explicitly requested.
 
@@ -23,7 +24,7 @@ Out of Scope:
 - Notifications
 - Service provider marketplace
 - Home analytics
-- AI recommendations
+- AI recommendations (homeowner-facing personalized suggestions -- distinct from the admin AI chat assistant above)
 
 ---
 
@@ -130,7 +131,8 @@ apps/backend/src
 │ ├── community/
 │ ├── announcements/
 │ ├── dashboard/
-│ └── upload/
+│ ├── upload/
+│ └── ai-chat/
 │
 ├── database/
 │
@@ -163,7 +165,8 @@ apps/frontend/src
 │ ├── communities/
 │ ├── community/
 │ ├── announcements/
-│ └── dashboard/
+│ ├── dashboard/
+│ └── ai-chat/
 │
 ├── components/
 ├── layouts/
@@ -198,7 +201,8 @@ packages/shared-types/src
 ├── announcement.ts
 ├── community.ts
 ├── dashboard.ts
-└── upload.ts
+├── upload.ts
+└── ai-chat.ts
 
 ---
 
@@ -297,6 +301,32 @@ Fields:
 
 ---
 
+## AiChatSession
+
+Fields:
+
+- id (uuid)
+- userId (FK to users)
+- title (derived from the first user message)
+- createdAt
+- updatedAt
+
+Not scoped to a community -- one user can have many sessions.
+
+---
+
+## AiChatMessage
+
+Fields:
+
+- id (uuid)
+- sessionId (FK to ai_chat_sessions, cascade delete)
+- role (`user`, `model`)
+- content (text)
+- createdAt
+
+---
+
 # Authentication
 
 Use JWT access tokens. JWT payload: `{ sub, email, role }`.
@@ -310,6 +340,7 @@ Protected routes use guards:
 - `RolesGuard` -- checks global user role (SUPER_ADMIN bypasses all)
 - `CommunityMemberGuard` -- checks community membership
 - `CommunityAdminGuard` -- checks COMMUNITY_ADMIN role in a community
+- `AdminGuard` -- checks SUPER_ADMIN or COMMUNITY_ADMIN of any community (for routes with no single :communityId, e.g. AI Chat)
 
 ---
 
@@ -430,6 +461,22 @@ Features:
 
 ---
 
+## AI Chat Module
+
+SUPER_ADMIN or COMMUNITY_ADMIN of any community. Not community-scoped -- sessions belong to the requesting user.
+
+Endpoints:
+
+- GET /ai-chat/sessions -- list current user's sessions, newest active first
+- POST /ai-chat/sessions -- create a new empty session
+- GET /ai-chat/sessions/:id/messages -- get messages in a session (oldest first)
+- POST /ai-chat/sessions/:id/messages -- send a message, get a Gemini reply, persist both
+- DELETE /ai-chat/sessions/:id -- delete a session and its messages
+
+Powered by the Gemini API (`@google/genai`) via a `GeminiClient` wrapper. General-purpose chat only -- no access to live platform data.
+
+---
+
 # API Standards
 
 Use DTO validation with class-validator.
@@ -460,6 +507,8 @@ The frontend is an Admin Portal with two views:
 - No access to global Users page or Communities list
 
 COMMUNITY_MEMBER cannot access the admin portal.
+
+A floating AI chat assistant (bottom-right button) is available in both views -- opens a chat panel, persists across navigation, and shows an unread badge + notification sound if a reply arrives while the panel is closed.
 
 ---
 
@@ -518,6 +567,9 @@ AWS_S3_REGION
 AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY
 AWS_S3_ENDPOINT
+
+GEMINI_API_KEY
+GEMINI_MODEL
 
 Frontend:
 
