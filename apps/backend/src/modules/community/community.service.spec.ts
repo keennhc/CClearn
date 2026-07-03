@@ -5,6 +5,7 @@ import { UserRole } from '@home-owners-hub/shared-types';
 import { CommunityMessage } from './entities/community-message.entity';
 import { CommunityService } from './community.service';
 import { CommunityGateway } from './community.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import { User } from '../users/entities/user.entity';
 
 const COMMUNITY_ID = 'community-1';
@@ -45,6 +46,7 @@ function makeMessage(overrides: Partial<CommunityMessage> = {}): CommunityMessag
 describe('CommunityService', () => {
   let service: CommunityService;
   let gateway: { broadcastMessage: jest.Mock };
+  let notificationsService: { notifyCommunity: jest.Mock };
   let repo: {
     findAndCount: jest.Mock;
     findOne: jest.Mock;
@@ -63,12 +65,14 @@ describe('CommunityService', () => {
     };
 
     gateway = { broadcastMessage: jest.fn() };
+    notificationsService = { notifyCommunity: jest.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityService,
         { provide: getRepositoryToken(CommunityMessage), useValue: repo },
         { provide: CommunityGateway, useValue: gateway },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -120,6 +124,21 @@ describe('CommunityService', () => {
       await service.create(COMMUNITY_ID, 'user-1', { message: 'Hello' });
 
       expect(gateway.broadcastMessage).toHaveBeenCalledWith(COMMUNITY_ID, expect.any(Object));
+    });
+
+    it('notifies the community, excluding the sender', async () => {
+      const msg = makeMessage();
+      repo.create.mockReturnValue(msg);
+      repo.save.mockResolvedValue(msg);
+      repo.findOne.mockResolvedValue(msg);
+
+      await service.create(COMMUNITY_ID, 'user-1', { message: 'Hello' });
+
+      expect(notificationsService.notifyCommunity).toHaveBeenCalledWith(
+        COMMUNITY_ID,
+        'user-1',
+        expect.objectContaining({ data: { type: 'message', communityId: COMMUNITY_ID } }),
+      );
     });
 
     it('throws NotFoundException when saved message cannot be re-fetched', async () => {

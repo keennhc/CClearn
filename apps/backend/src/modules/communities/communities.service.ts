@@ -298,6 +298,11 @@ export class CommunitiesService {
       }));
   }
 
+  async getCommunityMemberUserIds(communityId: string): Promise<string[]> {
+    const members = await this.memberRepo.find({ where: { communityId }, select: ['userId'] });
+    return members.map((m) => m.userId);
+  }
+
   // --- Private helpers ---
 
   private async findEntity(id: string): Promise<Community> {

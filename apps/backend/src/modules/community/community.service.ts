@@ -10,6 +10,7 @@ import { CommunityMessage } from './entities/community-message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CommunityGateway } from './community.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class CommunityService {
@@ -17,6 +18,7 @@ export class CommunityService {
     @InjectRepository(CommunityMessage)
     private readonly messagesRepository: Repository<CommunityMessage>,
     private readonly gateway: CommunityGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(communityId: string, query: PaginationQueryDto): Promise<PaginatedResult<CommunityMessageDto>> {
@@ -59,6 +61,11 @@ export class CommunityService {
     }
     const result = this.toDto(withUser);
     this.gateway.broadcastMessage(communityId, result);
+    void this.notificationsService.notifyCommunity(communityId, userId, {
+      title: result.userName,
+      body: result.message ?? 'Sent an attachment',
+      data: { type: 'message', communityId },
+    });
     return result;
   }
 

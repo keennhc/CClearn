@@ -5,12 +5,14 @@ import { Announcement as AnnouncementDto } from '@home-owners-hub/shared-types';
 import { Announcement } from './entities/announcement.entity';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AnnouncementsService {
   constructor(
     @InjectRepository(Announcement)
     private readonly announcementsRepository: Repository<Announcement>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll(communityId: string): Promise<AnnouncementDto[]> {
@@ -34,7 +36,13 @@ export class AnnouncementsService {
       where: { id: saved.id },
       relations: { author: true },
     });
-    return this.toDto(withAuthor!);
+    const result = this.toDto(withAuthor!);
+    void this.notificationsService.notifyCommunity(communityId, userId, {
+      title: 'New Announcement',
+      body: result.title,
+      data: { type: 'announcement', communityId, announcementId: result.id },
+    });
+    return result;
   }
 
   async update(communityId: string, id: string, dto: UpdateAnnouncementDto): Promise<AnnouncementDto> {

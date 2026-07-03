@@ -10,6 +10,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { CommunitiesModule } from './modules/communities/communities.module';
 import { AiChatModule } from './modules/ai-chat/ai-chat.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AiChatModule } from './modules/ai-chat/ai-chat.module';
     DashboardModule,
     UploadModule,
     AiChatModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

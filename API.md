@@ -224,6 +224,58 @@ Constraints:
 
 ---
 
+## Notifications
+
+### POST /notifications/register-token
+
+Requires authentication. Registers (or re-assigns, if the token already exists for another user -- e.g. a shared device) an Expo push token for the current user. Called after login/session-restore and whenever the OS issues a new token.
+
+**Request body**
+
+```json
+{
+  "token": "string (Expo push token)",
+  "platform": "ios | android"
+}
+```
+
+**Response**
+
+```json
+{ "success": true, "data": null }
+```
+
+---
+
+### DELETE /notifications/register-token
+
+Requires authentication. Removes a push token, scoped to the current user. Called on logout.
+
+**Request body**
+
+```json
+{ "token": "string" }
+```
+
+**Response**
+
+```json
+{ "success": true, "data": null }
+```
+
+---
+
+### Push triggers
+
+The backend sends a push notification (via the Expo push service) to all members of a community, excluding the actor, when:
+
+- A new community chat message is posted (`data: { type: "message", communityId }`)
+- A new announcement is created (`data: { type: "announcement", communityId, announcementId }`)
+
+Push failures are logged server-side and never affect the triggering request's response.
+
+---
+
 ## Users
 
 All `/users` endpoints require `SUPER_ADMIN` role.

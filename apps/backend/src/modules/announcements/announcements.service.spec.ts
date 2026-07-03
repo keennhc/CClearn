@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Announcement } from './entities/announcement.entity';
 import { AnnouncementsService } from './announcements.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const COMMUNITY_ID = 'community-1';
 
@@ -23,6 +24,7 @@ function makeAnnouncement(overrides: Partial<Announcement> = {}): Announcement {
 
 describe('AnnouncementsService', () => {
   let service: AnnouncementsService;
+  let notificationsService: { notifyCommunity: jest.Mock };
   let repo: {
     find: jest.Mock;
     findOne: jest.Mock;
@@ -42,10 +44,13 @@ describe('AnnouncementsService', () => {
       count: jest.fn(),
     };
 
+    notificationsService = { notifyCommunity: jest.fn().mockResolvedValue(undefined) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnnouncementsService,
         { provide: getRepositoryToken(Announcement), useValue: repo },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -85,6 +90,21 @@ describe('AnnouncementsService', () => {
       expect(result.title).toBe(ann.title);
       expect(result.communityId).toBe(COMMUNITY_ID);
       expect(result.authorFirstName).toBe('Jane');
+    });
+
+    it('notifies the community, excluding the author', async () => {
+      const ann = makeAnnouncement();
+      repo.create.mockReturnValue(ann);
+      repo.save.mockResolvedValue(ann);
+      repo.findOne.mockResolvedValue(ann);
+
+      await service.create(COMMUNITY_ID, 'user-1', { title: ann.title, content: ann.content });
+
+      expect(notificationsService.notifyCommunity).toHaveBeenCalledWith(
+        COMMUNITY_ID,
+        'user-1',
+        expect.objectContaining({ data: { type: 'announcement', communityId: COMMUNITY_ID, announcementId: ann.id } }),
+      );
     });
   });
 
