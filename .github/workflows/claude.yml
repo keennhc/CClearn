@@ -1,4 +1,5 @@
 name: Claude Code
+# Comment "@claude <request>" on a PR or issue to trigger this workflow.
 on:
   issue_comment:
     types: [created]
